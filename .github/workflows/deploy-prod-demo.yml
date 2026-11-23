@@ -1,0 +1,35 @@
+name: deploy-prod-demo
+
+# P1 : déclenchement manuel sur un tag de version (pas de relecteurs requis en dépôt privé).
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag d'image GHCR à déployer (ex. sha-1a2b3c4d5e6f)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: prod-demo
+    steps:
+      - uses: actions/checkout@v4
+      - name: Déploiement PROD-démo par SSH
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_USER: ${{ secrets.PROD_USER }}
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          if [ -z "$PROD_HOST" ] || [ -z "$PROD_SSH_KEY" ]; then
+            echo "::error::Secrets PROD_HOST, PROD_USER et PROD_SSH_KEY requis."
+            exit 1
+          fi
+          install -m 600 /dev/null key && printf '%s\n' "$PROD_SSH_KEY" > key
+          scp -i key -o StrictHostKeyChecking=accept-new docker-compose.yml "$PROD_USER@$PROD_HOST:~/xeleronia/docker-compose.yml"
+          ssh -i key "$PROD_USER@$PROD_HOST" "cd ~/xeleronia && export BACKEND_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/xeleronia-backend:$IMAGE_TAG WEB_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/xeleronia-web:$IMAGE_TAG && docker compose pull && docker compose up -d --remove-orphans"
+          rm -f key
