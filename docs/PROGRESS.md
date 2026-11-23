@@ -6,5 +6,6 @@ Jalon 1 : tâches 1 à 5 faites. Local : ruff, mypy, bandit, 13 tests backend, e
 ## Bloqué / réseau
 - Build Docker local impossible (ghcr.io et PyPI instables depuis le poste) : N-15 prouvé par le job CI `smoke`.
 - P13 ouvert : pas d'hôte DEV. Déploiement DEV désactivé tant que la variable DEV_DEPLOY_ENABLED n'est pas à true ; la porte « DEV déployé » reste non cochée.
+- Push refusé (403) : le compte Git OuissalJ n'a pas l'accès en écriture à ouissal-jouhari/Medical_Document_Generation_Assistant. Commits locaux prêts ; sans push, pas de CI ni de tag jalon-1.
 ## Notes
 - Test canari : a révélé que les URL réelles étaient journalisées (corrigé : gabarit de route, httpx en WARNING).
