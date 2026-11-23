@@ -3,22 +3,34 @@
 import logging
 import logging.handlers
 from pathlib import Path
-from typing import Any
 
 import structlog
+from structlog.typing import EventDict, WrappedLogger
 
 # Clés qui pourraient porter une donnée patient ou un secret : jamais journalisées.
 FORBIDDEN_KEYS = frozenset(
     {
-        "text", "content", "body", "input", "prompt", "transcript", "patient", "patient_name",
-        "name", "password", "token", "secret", "authorization", "api_key", "query", "ctx",
+        "text",
+        "content",
+        "body",
+        "input",
+        "prompt",
+        "transcript",
+        "patient",
+        "patient_name",
+        "name",
+        "password",
+        "token",
+        "secret",
+        "authorization",
+        "api_key",
+        "query",
+        "ctx",
     }
 )
 
 
-def drop_sensitive_keys(
-    _logger: Any, _method: str, event_dict: dict[str, Any]
-) -> dict[str, Any]:
+def drop_sensitive_keys(_logger: WrappedLogger, _method: str, event_dict: EventDict) -> EventDict:
     for key in FORBIDDEN_KEYS & event_dict.keys():
         event_dict[key] = "[REDACTED]"
     return event_dict
@@ -42,6 +54,9 @@ def configure_logging(log_dir: str, retention_days: int = 30) -> None:
     root.setLevel(logging.INFO)
     # Le journal d'accès d'uvicorn contient les URL complètes : remplacé par notre middleware.
     logging.getLogger("uvicorn.access").disabled = True
+    # Les clients HTTP journalisent l'URL complète (clé d'API possible) : niveau WARNING seulement.
+    for noisy in ("httpx", "httpcore"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
 
     structlog.configure(
         processors=[

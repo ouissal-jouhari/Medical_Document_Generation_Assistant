@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request, Response
 
 from app.api.routes.health import router as health_router
 from app.core.config import get_settings
-from app.core.errors import register_error_handlers
+from app.core.errors import register_error_handlers, route_template
 from app.core.logging import configure_logging
 
 log = structlog.get_logger()
@@ -24,11 +24,10 @@ def create_app() -> FastAPI:
     ) -> Response:
         start = time.perf_counter()
         response = await call_next(request)
-        route = request.scope.get("route")
         log.info(
             "request",
             method=request.method,
-            route=getattr(route, "path", "unmatched"),
+            route=route_template(request),
             status=response.status_code,
             duration_ms=round((time.perf_counter() - start) * 1000, 1),
         )
