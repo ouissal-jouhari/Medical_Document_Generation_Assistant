@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    image: ${BACKEND_IMAGE:-xeleronia-backend:local}
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - storage:/srv/storage
+      - logs:/var/log/xeleron
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: ${WEB_IMAGE:-xeleronia-web:local}
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+      MAX_REQUEST_BYTES: ${MAX_REQUEST_BYTES:-20971520}
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - caddy_data:/data
+    restart: unless-stopped
+
+  # Profil local uniquement : absent du déploiement hébergé (démo = Gemini).
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["local"]
+    volumes:
+      - ollama:/root/.ollama
+    restart: unless-stopped
+
+# Chiffrement au repos : ces volumes résident sur un volume de l'hôte chiffré (ADR 0003).
+volumes:
+  pgdata:
+  storage:
+  logs:
+  caddy_data:
+  ollama:
