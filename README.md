@@ -1,0 +1,2 @@
+# Medical_Document_Generation_Assistant
+Internship Project 2026
