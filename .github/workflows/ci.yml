@@ -59,9 +59,24 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
 
+  smoke:
+    # N-15 : démarrage reproductible par conteneur (pile complète, sonde /health via Caddy).
+    needs: [quality]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env
+      - run: docker compose up -d --build --wait --wait-timeout 240
+      - name: Sonde de santé via Caddy
+        run: curl -fsSk --retry 5 --retry-delay 3 https://localhost/api/health
+      - name: Journaux en cas d'échec
+        if: failure()
+        run: docker compose logs --no-color backend web db | tail -n 100
+      - run: docker compose down -v
+
   build-push:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [quality, security]
+    needs: [quality, security, smoke]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -104,6 +119,8 @@ jobs:
           ignore-unfixed: true
 
   deploy-dev:
+    # Activé quand l'hôte DEV existe : variable de dépôt DEV_DEPLOY_ENABLED=true (P13, voir PROGRESS.md).
+    if: vars.DEV_DEPLOY_ENABLED == 'true'
     needs: build-push
     runs-on: ubuntu-latest
     environment: dev

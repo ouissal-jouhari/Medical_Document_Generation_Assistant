@@ -1,5 +1,4 @@
 from alembic import context
-
 from app.adapters.db import Base, make_engine
 from app.core.config import get_settings
 

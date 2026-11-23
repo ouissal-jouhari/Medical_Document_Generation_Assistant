@@ -39,7 +39,8 @@ Les tests portent l'ID de l'exigence couverte (ex. `test_N08_...`). Le test cana
 
 ## CI/CD (ADR 0002)
 GitHub Actions : qualité (ruff, mypy, pytest, eslint), sécurité (bandit, gitleaks, Trivy), build et publication des images dans GHCR, déploiement DEV automatique sur `main`. PROD-démo : workflow `deploy-prod-demo` lancé à la main sur un tag `v*`.
-Secrets GitHub requis : `DEV_HOST`, `DEV_USER`, `DEV_SSH_KEY` (et `PROD_*` pour la démo).
+Le job `smoke` démarre la pile complète et sonde `/api/health` (N-15).
+Déploiement DEV : dès que l'hôte existe, définir les secrets `DEV_HOST`, `DEV_USER`, `DEV_SSH_KEY` et la variable de dépôt `DEV_DEPLOY_ENABLED=true` (`PROD_*` pour la démo).
 
 ## Chiffrement au repos (ADR 0003)
 Les volumes Docker (`pgdata`, `storage`, `logs`) doivent résider sur un disque chiffré par l'hôte. Vérification sur l'hôte Linux : `lsblk -o NAME,TYPE,MOUNTPOINT` doit montrer le point de montage de `/var/lib/docker` sous un périphérique de type `crypt`.
