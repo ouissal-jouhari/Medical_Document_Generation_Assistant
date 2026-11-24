@@ -13,7 +13,8 @@ Monolithe modulaire conteneurisé (ADR 0001) :
   - `app/templates` : templates de documents en YAML.
 - `frontend/` – React, Vite, TypeScript ; image servie par Caddy.
 - `deploy/Caddyfile` – TLS, limite de taille des requêtes, en-têtes de sécurité, proxy `/api` vers le backend.
-- `docker-compose.yml` – `db` (PostgreSQL), `backend`, `web` (Caddy + frontend), `ollama` (profil `local` seulement).
+- `docker-compose.yml` – `db` (PostgreSQL), `keycloak` (OIDC + MFA, realm dans `deploy/keycloak/`), `backend`, `web` (Caddy + frontend), `ollama` (profil `local` seulement).
+- Identité : connexion OIDC (PKCE) avec TOTP obligatoire ; l'API vérifie la signature du jeton et le niveau `acr` (ADR 0004, 0005). Audit en ajout seul garanti par les droits PostgreSQL (ADR 0006).
 
 ## Installation (développement)
 Prérequis : Python 3.12 et [uv](https://docs.astral.sh/uv/), Node 22, Docker.
@@ -35,6 +36,8 @@ Application : https://localhost (certificat interne de Caddy). Hors conteneur : 
 cd backend && uv run pytest && uv run ruff check . && uv run mypy && uv run bandit -r app -c pyproject.toml
 cd frontend && npm run lint && npm run build
 ```
+Les tests de droits de base (F-21) ont besoin de PostgreSQL : définir `TEST_DATABASE_URL` (ex. `postgresql+psycopg://postgres:motdepasse@localhost:5432/postgres`, un compte pouvant créer des bases). Sans cette variable ils sont ignorés en local et échouent en CI.
+Utilisateur de test Keycloak : `clinicien-test`, mot de passe `KC_TEST_USER_PASSWORD`. Le secret TOTP brut est `KC_TEST_USER_TOTP_SECRET` ; à saisir dans une application TOTP en base32 (`python -c "import base64;print(base64.b32encode(b'<secret>').decode())"`).
 Les tests portent l'ID de l'exigence couverte (ex. `test_N08_...`). Le test canari (`tests/test_n08_canary.py`) vérifie qu'aucune donnée patient n'apparaît dans les logs ni dans les erreurs.
 
 ## CI/CD (ADR 0002)
