@@ -150,14 +150,14 @@ aucun
 - L'audit sans clé étrangère et la séparation des rôles de base servent F-22 et N-10 (jalon 6).
 
 ### Porte de sortie du jalon 2
-- [ ] Tâches 1 à 5 faites
-- [ ] F-01 vérifié (sans MFA : refus, y compris jeton mono-facteur rejeté par l'API ; sans session : redirection)
-- [ ] F-02 vérifié (revue de conception + test de parcours des routes)
-- [ ] F-25 vérifié (un autre clinicien ne voit pas l'existence)
-- [ ] F-21 vérifié (aucune route ; UPDATE/DELETE refusés au rôle applicatif par la base)
-- [ ] N-11 : message sûr, sans trace technique, pour authentification et accès refusé
-- [ ] Canari absent des logs
-- [ ] Pipeline CI vert
+- [x] Tâches 1 à 5 faites
+- [ ] F-01 : fait = jeton mono-facteur rejeté par l'API (test_F01_*, et script de bout en bout scripts/mfa_login_check.py rejoué en CI : MFA réel -> 200 avec acr=2, mono-facteur -> 403 mfa_required) ; sans session -> 401 `authentication_required` ; **reste = test automatique de la redirection côté navigateur (Playwright, jalon 7)**
+- [x] F-02 vérifié (revue de conception ADR 0001/0005 + test_F02_* : toutes les routes dépendent de l'authentification, ajout d'un rôle sans modifier les routes)
+- [x] F-25 vérifié (test_F25_* : un autre clinicien reçoit la même réponse qu'une ressource inexistante, y compris pour l'export ; à rejouer aux jalons 5 et 6)
+- [x] F-21 vérifié (test_F21_* : aucune route d'audit ; UPDATE, DELETE et TRUNCATE refusés au rôle applicatif par PostgreSQL, testé en CI sur une base migrée par Alembic)
+- [x] N-11 : message sûr, sans trace technique, pour authentification (absente, expirée, MFA manquant, fournisseur indisponible) et accès refusé / introuvable
+- [x] Canari absent des logs (test_N08_*, y compris nom d'affichage et jeton)
+- [x] Pipeline CI vert (run 45305466333)
 - [ ] Utilisateur : « jalon validé »
 
 ---
