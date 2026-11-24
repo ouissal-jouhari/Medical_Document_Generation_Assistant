@@ -1,0 +1,196 @@
+{
+  "realm": "xeleron",
+  "displayName": "XeleronIA",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyPeriod": 30,
+  "roles": {
+    "realm": [
+      {
+        "name": "clinician",
+        "description": "Clinicien : rôle unique du MVP (F-02)"
+      }
+    ]
+  },
+  "authenticationFlows": [
+    {
+      "alias": "browser-mfa",
+      "description": "Connexion navigateur : mot de passe (niveau 1) puis TOTP obligatoire (niveau 2)",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "userSetupAllowed": false,
+          "authenticatorFlow": false,
+          "autheticatorFlow": false,
+          "authenticator": "auth-cookie",
+          "requirement": "ALTERNATIVE",
+          "priority": 10
+        },
+        {
+          "userSetupAllowed": false,
+          "authenticatorFlow": true,
+          "autheticatorFlow": true,
+          "flowAlias": "browser-mfa-forms",
+          "requirement": "ALTERNATIVE",
+          "priority": 20
+        }
+      ]
+    },
+    {
+      "alias": "browser-mfa-forms",
+      "description": "",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "userSetupAllowed": false,
+          "authenticatorFlow": true,
+          "autheticatorFlow": true,
+          "flowAlias": "browser-mfa-level1",
+          "requirement": "CONDITIONAL",
+          "priority": 10
+        },
+        {
+          "userSetupAllowed": false,
+          "authenticatorFlow": true,
+          "autheticatorFlow": true,
+          "flowAlias": "browser-mfa-level2",
+          "requirement": "CONDITIONAL",
+          "priority": 20
+        }
+      ]
+    },
+    {
+      "alias": "browser-mfa-level1",
+      "description": "",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "userSetupAllowed": false,
+          "authenticatorFlow": false,
+          "autheticatorFlow": false,
+          "authenticator": "conditional-level-of-authentication",
+          "authenticatorConfig": "loa1",
+          "requirement": "REQUIRED",
+          "priority": 10
+        },
+        {
+          "userSetupAllowed": false,
+          "authenticatorFlow": false,
+          "autheticatorFlow": false,
+          "authenticator": "auth-username-password-form",
+          "requirement": "REQUIRED",
+          "priority": 20
+        }
+      ]
+    },
+    {
+      "alias": "browser-mfa-level2",
+      "description": "",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "userSetupAllowed": false,
+          "authenticatorFlow": false,
+          "autheticatorFlow": false,
+          "authenticator": "conditional-level-of-authentication",
+          "authenticatorConfig": "loa2",
+          "requirement": "REQUIRED",
+          "priority": 10
+        },
+        {
+          "userSetupAllowed": true,
+          "authenticatorFlow": false,
+          "autheticatorFlow": false,
+          "authenticator": "auth-otp-form",
+          "requirement": "REQUIRED",
+          "priority": 20
+        }
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    {
+      "alias": "loa1",
+      "config": {
+        "loa-condition-level": "1",
+        "loa-max-age": "36000"
+      }
+    },
+    {
+      "alias": "loa2",
+      "config": {
+        "loa-condition-level": "2",
+        "loa-max-age": "1800"
+      }
+    }
+  ],
+  "browserFlow": "browser-mfa",
+  "clients": [
+    {
+      "clientId": "xeleron-web",
+      "name": "XeleronIA (interface web)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "${KC_REDIRECT_URI}"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+",
+        "default.acr.values": "2"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "clinicien-test",
+      "enabled": true,
+      "firstName": "Clinicien",
+      "lastName": "Test",
+      "email": "clinicien-test@example.invalid",
+      "emailVerified": true,
+      "realmRoles": [
+        "clinician"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${KC_TEST_USER_PASSWORD}",
+          "temporary": false
+        },
+        {
+          "type": "otp",
+          "userLabel": "TOTP de test",
+          "secretData": "{\"value\":\"${KC_TEST_USER_TOTP_SECRET}\"}",
+          "credentialData": "{\"subType\":\"totp\",\"digits\":6,\"counter\":0,\"period\":30,\"algorithm\":\"HmacSHA1\"}"
+        }
+      ]
+    }
+  ]
+}

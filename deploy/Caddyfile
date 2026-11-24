@@ -8,18 +8,29 @@
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
-		X-Frame-Options "DENY"
 		Referrer-Policy "no-referrer"
-		Content-Security-Policy "default-src 'self'; frame-ancestors 'none'"
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 		-Server
 	}
 
+	# Keycloak pose ses propres en-têtes (CSP, X-Frame-Options) : on ne les écrase pas.
+	handle /auth/* {
+		reverse_proxy keycloak:8080
+	}
+
 	handle_path /api/* {
+		header {
+			X-Frame-Options "DENY"
+			Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+		}
 		reverse_proxy backend:8000
 	}
 
 	handle {
+		header {
+			X-Frame-Options "DENY"
+			Content-Security-Policy "default-src 'self'; connect-src 'self'; frame-ancestors 'none'"
+		}
 		root * /srv/www
 		try_files {path} /index.html
 		file_server

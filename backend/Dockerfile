@@ -15,4 +15,5 @@ ENV PATH="/srv/.venv/bin:$PATH"
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --retries=5 \
     CMD ["python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
-CMD ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+# Migrations avec le propriétaire (MIGRATION_DATABASE_URL), puis service avec le rôle applicatif.
+CMD ["sh", "-c", "alembic upgrade head && unset MIGRATION_DATABASE_URL APP_DB_PASSWORD PURGE_DB_PASSWORD && exec uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --no-access-log"]
