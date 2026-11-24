@@ -64,6 +64,8 @@ services:
       APP_DB_PASSWORD: ${APP_DB_PASSWORD}
       PURGE_DB_PASSWORD: ${PURGE_DB_PASSWORD}
       LOG_DIR: /var/log/xeleron
+      STORAGE_DIR: /srv/storage
+      MAX_UPLOAD_BYTES: 52428800
       LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS:-30}
       OIDC_ISSUER: ${SITE_URL}/auth/realms/xeleron
       OIDC_JWKS_URL: http://keycloak:8080/auth/realms/xeleron/protocol/openid-connect/certs
@@ -86,7 +88,7 @@ services:
     image: ${WEB_IMAGE:-xeleronia-web:local}
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
-      MAX_REQUEST_BYTES: ${MAX_REQUEST_BYTES:-20971520}
+      MAX_REQUEST_BYTES: ${MAX_REQUEST_BYTES:-53477376}
     ports:
       - "80:80"
       - "443:443"

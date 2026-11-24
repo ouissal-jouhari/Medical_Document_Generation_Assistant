@@ -2,7 +2,7 @@
 	encode gzip
 
 	request_body {
-		max_size {$MAX_REQUEST_BYTES:20971520}
+		max_size {$MAX_REQUEST_BYTES:53477376}
 	}
 
 	header {

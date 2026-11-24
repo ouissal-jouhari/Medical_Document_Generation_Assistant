@@ -71,6 +71,19 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
 
+  ocr:
+    # Docling réel sur CPU : extraction d'un scan dégradé et d'un PDF sans couche texte.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+      - name: Tests Docling
+        working-directory: backend
+        env:
+          RUN_DOCLING_TESTS: "1"
+        run: uv sync --frozen --extra ocr && uv run pytest tests/test_docling_integration.py -q -s -p no:cacheprovider
+
   smoke:
     # N-15 : démarrage reproductible par conteneur (pile complète, sonde /health via Caddy).
     needs: [quality]
@@ -100,7 +113,7 @@ jobs:
 
   build-push:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [quality, security, smoke]
+    needs: [quality, security, ocr, smoke]
     runs-on: ubuntu-latest
     permissions:
       contents: read
