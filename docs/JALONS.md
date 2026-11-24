@@ -98,12 +98,12 @@ R-06
 - L'ordonnanceur de purge (jalon 6) s'appuie sur l'horloge injectable décidée ici.
 
 ### Porte de sortie du jalon 1
-- [ ] Tâches 1 à 5 faites
-- [ ] N-05 vérifié : gitleaks (aucun secret dans le dépôt), canari absent des logs, chiffrement en transit (Caddy) et au repos (volume de l'hôte : base et fichiers) démontré
-- [ ] N-13 vérifié (revue de conception des 5 interfaces)
-- [ ] N-15 vérifié (démarrage par conteneur reproductible)
-- [ ] N-08 vérifié (canari : logs et erreurs sans donnée patient)
-- [ ] Pipeline CI vert, DEV déployé
+- [x] Tâches 1 à 5 faites
+- [ ] N-05 : fait = gitleaks vert en CI, canari absent des logs (test_N08_*, test_N05_*), TLS Caddy démontré par le job smoke ; **reste = chiffrement au repos à démontrer sur l'hôte (ADR 0003, hôte DEV P13)**
+- [x] N-13 vérifié (test_N13_* : domaine et ports sans dépendance externe, un faux fournisseur par port)
+- [x] N-15 vérifié (job CI smoke : pile complète démarrée, /api/health via Caddy)
+- [x] N-08 vérifié (canari : logs et erreurs sans donnée patient, 5 tests)
+- [ ] Pipeline CI vert (fait : run 45293186964 vert, images publiées sur GHCR) ; **DEV déployé : en attente de l'hôte (P13)**
 - [ ] Utilisateur : « jalon validé »
 
 ---
