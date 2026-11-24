@@ -16,7 +16,9 @@ log = structlog.get_logger()
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_dir, settings.log_retention_days)
-    app = FastAPI(title="XeleronIA", version="0.1.0")
+    app = FastAPI(
+        title="XeleronIA", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None
+    )
     register_error_handlers(app)
 
     @app.middleware("http")

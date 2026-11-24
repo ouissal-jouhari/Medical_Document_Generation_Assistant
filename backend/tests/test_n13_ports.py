@@ -5,6 +5,7 @@ ni bibliothèque externe ; un faux fournisseur suffit à satisfaire chaque port.
 """
 
 import ast
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +25,7 @@ from app.ports import (
 )
 
 APP = Path(__file__).resolve().parents[1] / "app"
-STDLIB_OK = {"dataclasses", "datetime", "typing", "app", "__future__"}
+STDLIB_OK = set(sys.stdlib_module_names) | {"app"}
 
 
 def _imports(package: str) -> set[str]:

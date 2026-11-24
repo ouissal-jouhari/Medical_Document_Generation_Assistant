@@ -7,20 +7,20 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from alembic import command
 from alembic.config import Config
-from fastapi.routing import APIRoute
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import Session
 
+from alembic import command
 from app.adapters.audit import SqlAuditLog, purge_audit_before
 from app.adapters.models import AuditEventRow, User
 from app.core.config import get_settings
 from app.domain.audit import AuditAction
 from app.domain.clock import FixedClock
 from tests.conftest import Api, require_postgres_url
+from tests.helpers_routes import api_routes
 
 BACKEND = Path(__file__).resolve().parents[1]
 APP_PW = "app-test-pw"  # noqa: S105 - mot de passe de test, base jetable
@@ -75,9 +75,10 @@ def test_F21_audit_is_written_in_the_same_transaction_as_the_action(api: Api) ->
 
 
 def test_F21_no_route_can_read_modify_or_delete_audit_events(api: Api) -> None:
-    for route in api.app.routes:
-        if isinstance(route, APIRoute):
-            assert "audit" not in route.path.lower(), route.path
+    routes = api_routes(api.app)
+    assert len(routes) >= 2  # le parcours n'est pas vide
+    for route, _ in routes:
+        assert "audit" not in route.path.lower(), route.path
 
 
 def test_F21_audit_has_no_foreign_key_to_documents(api: Api) -> None:

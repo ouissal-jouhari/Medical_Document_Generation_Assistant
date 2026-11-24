@@ -1,42 +1,39 @@
-"""F-02 : chaque route vérifie l'authentification et le rôle ; ajouter un rôle ne touche pas aux routes."""  # noqa: E501
+"""F-02 : chaque route vérifie l'authentification et le rôle.
 
-from collections.abc import Iterator
+Ajouter un rôle ne demande pas de modifier les routes.
+"""
 
 import pytest
-from fastapi.dependencies.models import Dependant
-from fastapi.routing import APIRoute
 
 from app.api.deps import get_current_user
 from app.domain.auth import ROLE_PERMISSIONS, Permission
 from tests.conftest import Api
+from tests.helpers_routes import api_routes, route_depends_on
 
 # Routes publiques volontaires : sonde de santé uniquement.
 PUBLIC_ROUTES = {"/health"}
 
 
-def _dependencies(dependant: Dependant) -> Iterator[object]:
-    for sub in dependant.dependencies:
-        yield sub.call
-        yield from _dependencies(sub)
-
-
 def test_F02_every_route_declares_the_authentication_dependency(api: Api) -> None:
-    protected = []
-    for route in api.app.routes:
-        if not isinstance(route, APIRoute) or route.path in PUBLIC_ROUTES:
+    routes = api_routes(api.app)
+    paths = {route.path for route, _ in routes}
+    assert {"/health", "/me"} <= paths  # le parcours n'est pas vide
+    for route, inherited in routes:
+        if route.path in PUBLIC_ROUTES:
             continue
-        assert get_current_user in set(_dependencies(route.dependant)), route.path
-        protected.append(route.path)
-    assert "/me" in protected
+        assert route_depends_on(route, inherited, get_current_user), route.path
 
 
 def test_F02_unauthenticated_call_to_every_protected_route_is_refused(api: Api) -> None:
-    for route in api.app.routes:
-        if isinstance(route, APIRoute) and route.path not in PUBLIC_ROUTES:
-            for method in route.methods:
-                response = api.client.request(method, route.path.replace("{", "").replace("}", ""))
-                assert response.status_code in (401, 404, 405, 422), (method, route.path)
-                assert response.status_code != 200
+    checked = 0
+    for route, _ in api_routes(api.app):
+        if route.path in PUBLIC_ROUTES:
+            continue
+        for method in route.methods or set():
+            response = api.client.request(method, route.path)
+            assert response.status_code in (401, 422), (method, route.path)
+            checked += 1
+    assert checked >= 1
 
 
 def test_F02_adding_a_role_requires_no_route_change(
