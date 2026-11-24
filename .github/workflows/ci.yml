@@ -82,7 +82,18 @@ jobs:
         working-directory: backend
         env:
           RUN_DOCLING_TESTS: "1"
-        run: uv sync --frozen --extra ocr && uv run pytest tests/test_docling_integration.py -q -s -p no:cacheprovider
+        run: |
+          uv sync --frozen --extra ocr
+          set +e
+          uv run pytest tests/test_docling_integration.py -q -s -p no:cacheprovider > ocr.log 2>&1
+          code=$?
+          tail -n 40 ocr.log
+          if [ "$code" -ne 0 ]; then
+            summary=$(grep -E '^E |Error|FAILED|passed|failed|mesure' ocr.log | tail -15 | sed ':a;N;$!ba;s/
+/%0A/g')
+            echo "::error title=Tests Docling::${summary}"
+          fi
+          exit "$code"
 
   smoke:
     # N-15 : démarrage reproductible par conteneur (pile complète, sonde /health via Caddy).
