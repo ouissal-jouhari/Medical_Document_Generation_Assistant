@@ -48,7 +48,7 @@ Dire : « Démarre le jalon N ». Le contenu du jalon N est alors lu, puis exéc
 | Jalon | Nom | Semaines | Jours | Statut |
 |---|---|---|---|---|
 | 1 | Socle technique et CI/CD | S1 | j1–j4 | EN COURS (DEV et validation reportés) |
-| 2 | Authentification, contrôle d'accès et audit | S1–S2 | j5–j8 | EN COURS |
+| 2 | Authentification, contrôle d'accès et audit | S1–S2 | j5–j8 | TERMINÉ |
 | 3 | Superbill : dépôt, extraction, vérification | S2–S3 | j9–j15 | À FAIRE |
 | 4 | Texte de consultation et génération | S4–S5 | j16–j23 | À FAIRE |
 | 5 | Revue, versions et approbation | S5–S6 | j24–j30 | À FAIRE |
@@ -151,14 +151,14 @@ aucun
 
 ### Porte de sortie du jalon 2
 - [x] Tâches 1 à 5 faites
-- [ ] F-01 : fait = jeton mono-facteur rejeté par l'API (test_F01_*, et script de bout en bout scripts/mfa_login_check.py rejoué en CI : MFA réel -> 200 avec acr=2, mono-facteur -> 403 mfa_required) ; sans session -> 401 `authentication_required` ; **reste = test automatique de la redirection côté navigateur (Playwright, jalon 7)**
+- [x] F-01 : jeton mono-facteur rejeté par l'API (test_F01_*, et scripts/mfa_login_check.py rejoué en CI : MFA réel -> 200 avec acr=2, mono-facteur -> 403 mfa_required) ; sans session -> 401 ; connexion navigateur vérifiée à la main par l'utilisateur. **Écart connu : le test automatique de la redirection navigateur (Playwright) est reporté au jalon 7.**
 - [x] F-02 vérifié (revue de conception ADR 0001/0005 + test_F02_* : toutes les routes dépendent de l'authentification, ajout d'un rôle sans modifier les routes)
 - [x] F-25 vérifié (test_F25_* : un autre clinicien reçoit la même réponse qu'une ressource inexistante, y compris pour l'export ; à rejouer aux jalons 5 et 6)
 - [x] F-21 vérifié (test_F21_* : aucune route d'audit ; UPDATE, DELETE et TRUNCATE refusés au rôle applicatif par PostgreSQL, testé en CI sur une base migrée par Alembic)
 - [x] N-11 : message sûr, sans trace technique, pour authentification (absente, expirée, MFA manquant, fournisseur indisponible) et accès refusé / introuvable
 - [x] Canari absent des logs (test_N08_*, y compris nom d'affichage et jeton)
 - [x] Pipeline CI vert (run 45305466333)
-- [ ] Utilisateur : « jalon validé »
+- [x] Utilisateur : « jalon validé » (2 : validé par l'utilisateur)
 
 ---
 
