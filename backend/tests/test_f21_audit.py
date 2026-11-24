@@ -1,30 +1,20 @@
 """F-20 / F-21 : audit en ajout seul, garanti par la base, écrit dans la transaction de l'action."""
 
-from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from alembic.config import Config
 from sqlalchemy import select
-from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import Session
 
-from alembic import command
 from app.adapters.audit import SqlAuditLog, purge_audit_before
 from app.adapters.models import AuditEventRow, User
-from app.core.config import get_settings
 from app.domain.audit import AuditAction
 from app.domain.clock import FixedClock
-from tests.conftest import Api, require_postgres_url
+from tests.conftest import Api
 from tests.helpers_routes import api_routes
-
-BACKEND = Path(__file__).resolve().parents[1]
-APP_PW = "app-test-pw"  # noqa: S105 - mot de passe de test, base jetable
-PURGE_PW = "purge-test-pw"  # noqa: S105
 
 
 def test_F20_event_has_actor_action_date_document_and_version(api: Api) -> None:
@@ -83,39 +73,6 @@ def test_F21_no_route_can_read_modify_or_delete_audit_events(api: Api) -> None:
 
 def test_F21_audit_has_no_foreign_key_to_documents(api: Api) -> None:
     assert sa.inspect(api.engine).get_foreign_keys("audit_event") == []
-
-
-@pytest.fixture
-def migrated(monkeypatch: pytest.MonkeyPatch) -> Iterator[dict[str, str]]:
-    """Base PostgreSQL jetable migrée par Alembic (droits réels de la migration 0002)."""
-    admin_url = require_postgres_url()
-    name = f"xeleron_test_{uuid4().hex[:10]}"
-    admin = sa.create_engine(admin_url, isolation_level="AUTOCOMMIT")
-    with admin.connect() as conn:
-        conn.execute(sa.text(f'CREATE DATABASE "{name}"'))
-    base = make_url(admin_url)
-    owner_url = base.set(database=name).render_as_string(hide_password=False)
-    monkeypatch.setenv("MIGRATION_DATABASE_URL", owner_url)
-    monkeypatch.setenv("DATABASE_URL", owner_url)
-    monkeypatch.setenv("APP_DB_PASSWORD", APP_PW)
-    monkeypatch.setenv("PURGE_DB_PASSWORD", PURGE_PW)
-    get_settings.cache_clear()
-    config = Config(str(BACKEND / "alembic.ini"))
-    config.set_main_option("script_location", str(BACKEND / "alembic"))
-    command.upgrade(config, "head")
-    urls = {
-        "app": base.set(database=name, username="xeleron_app", password=APP_PW).render_as_string(
-            hide_password=False
-        ),
-        "purge": base.set(
-            database=name, username="xeleron_purge", password=PURGE_PW
-        ).render_as_string(hide_password=False),
-    }
-    yield urls
-    get_settings.cache_clear()
-    with admin.connect() as conn:
-        conn.execute(sa.text(f'DROP DATABASE "{name}" WITH (FORCE)'))
-    admin.dispose()
 
 
 def _insert_event(session: Session) -> None:
