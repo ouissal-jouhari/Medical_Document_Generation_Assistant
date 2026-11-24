@@ -36,6 +36,7 @@ Application : https://localhost (certificat interne de Caddy). Hors conteneur : 
 cd backend && uv run pytest && uv run ruff check . && uv run mypy && uv run bandit -r app -c pyproject.toml
 cd frontend && npm run lint && npm run build
 ```
+Superbills : PDF de 3 pages au maximum ou une image png/jpg/jpeg, 50 Mo au maximum (ADR 0009). L'extraction lit la couche texte du PDF, puis Docling sur CPU pour les scans (ADR 0007) ; Docling est un extra : `uv sync --extra ocr`, puis `RUN_DOCLING_TESTS=1 uv run pytest tests/test_docling_integration.py -s`. Les jeux de test synthétiques se régénèrent avec `uv run python ../scripts/make_superbill_fixtures.py`.
 Les tests de droits de base (F-21) ont besoin de PostgreSQL : définir `TEST_DATABASE_URL` (ex. `postgresql+psycopg://postgres:motdepasse@localhost:5432/postgres`, un compte pouvant créer des bases). Sans cette variable ils sont ignorés en local et échouent en CI.
 Utilisateur de test Keycloak : `clinicien-test`, mot de passe `KC_TEST_USER_PASSWORD`. Le secret TOTP brut est `KC_TEST_USER_TOTP_SECRET` ; à saisir dans une application TOTP en base32 (`python -c "import base64;print(base64.b32encode(b'<secret>').decode())"`).
 Les tests portent l'ID de l'exigence couverte (ex. `test_N08_...`). Le test canari (`tests/test_n08_canary.py`) vérifie qu'aucune donnée patient n'apparaît dans les logs ni dans les erreurs.
