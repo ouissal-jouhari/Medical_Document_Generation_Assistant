@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     storage_dir: str = "storage"
     max_upload_bytes: int = 50 * 1024 * 1024
     docling_artifacts_path: str | None = None
-    extraction_timeout_seconds: float = 120.0
+    extraction_timeout_seconds: float = 300.0
 
 
 @lru_cache

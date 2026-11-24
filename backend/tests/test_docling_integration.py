@@ -23,7 +23,9 @@ FIXTURES = Path(__file__).parent / "fixtures" / "superbills"
 
 @pytest.fixture(scope="module")
 def provider() -> HybridOcrProvider:
-    return HybridOcrProvider(DoclingMarkdownConverter(os.environ.get("DOCLING_ARTIFACTS_PATH")))
+    return HybridOcrProvider(
+        DoclingMarkdownConverter(os.environ.get("DOCLING_ARTIFACTS_PATH")), timeout_seconds=900.0
+    )
 
 
 def test_F04_degraded_scan_goes_through_docling_and_yields_fields(

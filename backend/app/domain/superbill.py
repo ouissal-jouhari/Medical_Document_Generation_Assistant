@@ -119,7 +119,10 @@ def validate(data: SuperbillData, known_icd: Container[str] | None) -> list[Issu
             issues.append(Issue(name, "required_missing", True))
         elif not ICD10CM.match(normalize_icd(diagnosis.code)):
             issues.append(Issue(name, "invalid_icd10cm_format", True))
-        elif known_icd is not None and normalize_icd(diagnosis.code).replace(".", "") not in known_icd:
+        elif (
+            known_icd is not None
+            and normalize_icd(diagnosis.code).replace(".", "") not in known_icd
+        ):
             issues.append(Issue(name, "icd10cm_unknown", False))
     for i, procedure in enumerate(data.procedures):
         name = f"procedures[{i}].code"
@@ -209,7 +212,9 @@ def from_dict(raw: dict[str, Any]) -> SuperbillData:
         ),
         procedures=tuple(
             Procedure(
-                _text(p.get("code")) or "", _text(p.get("description")) or "", _units(p.get("units"))
+                _text(p.get("code")) or "",
+                _text(p.get("description")) or "",
+                _units(p.get("units")),
             )
             for p in raw.get("procedures") or []
         ),
@@ -252,4 +257,3 @@ def diff(old: dict[str, Any], new: dict[str, Any]) -> list[FieldChange]:
         if before.get(path) != after.get(path):
             changes.append(FieldChange(path, before.get(path), after.get(path)))
     return changes
-

@@ -16,57 +16,70 @@ from app.domain.superbill import (
     SuperbillData,
 )
 
-# Libellés par champ. Séparateur obligatoire après le libellé : deux-points, tabulation ou
-# au moins deux espaces (cellule de tableau), pour éviter de prendre un mot courant pour un libellé.
-_LABELS: dict[str, tuple[str, ...]] = {
-    "patient_full_name": (r"patient\s+name", r"name\s+of\s+patient", r"patient"),
-    "patient_date_of_birth": (r"date\s+of\s+birth", r"birth\s+date", r"dob"),
-    "patient_id": (
-        r"patient\s+id",
-        r"patient\s*#",
-        r"mrn",
-        r"medical\s+record\s+(?:number|no\.?|#)",
-        r"account\s+(?:number|no\.?|#)",
-    ),
-    "physician_name": (
-        r"rendering\s+provider",
-        r"referring\s+physician",
-        r"physician(?:\s+name)?",
-        r"provider(?:\s+name)?",
-        r"doctor",
-    ),
-    "date_of_service": (r"date\s+of\s+service", r"service\s+date", r"dos"),
-    "place_of_service": (r"place\s+of\s+service", r"pos"),
+# (champ, motif, souple). Après le libellé : deux-points, tabulation ou deux espaces au moins.
+# Un libellé « souple » accepte aussi un seul espace suivi d'une majuscule, d'un chiffre, de « $ »
+# ou de « ( » (cellule d'un formulaire sans deux-points), ou la fin de ligne (valeur à la ligne
+# suivante). Les mots courts et ambigus restent stricts. L'ordre compte : le premier motif qui
+# correspond l'emporte, donc les libellés ignorés et les plus spécifiques passent en premier
+# (« physician npi » avant « physician »).
+_LABELS: list[tuple[str, str, bool]] = [
     # Libellés connus mais non utilisés : ils servent seulement à terminer la valeur précédente.
-    "ignored": (
-        r"insurance(?:\s+(?:provider|company|carrier|name|id))?",
-        r"payer",
-        r"phone(?:\s+(?:number|no\.?))?",
-        r"tel(?:ephone)?",
-        r"fax",
-        r"address",
-        r"e-?mail",
-        r"npi",
-        r"tax\s+id",
-        r"(?:policy|group|member)\s+(?:id|number|no\.?|#)",
-    ),
-    "total_charges": (r"total\s+charges?", r"total\s+fees?", r"total\s+amount", r"grand\s+total"),
-}
-_SEP = r"(?:\s*[:：]\s*|\s{2,}|\t+)"
+    ("ignored", r"(?:physician\s+)?signature", False),
+    ("ignored", r"physician\s+npi", True),
+    ("ignored", r"(?:primary|secondary)\s+insurance", True),
+    ("ignored", r"insurance\s+(?:provider|company|carrier|name|id)", True),
+    ("ignored", r"insurance", False),
+    ("ignored", r"payer", False),
+    ("ignored", r"superbill\s+(?:no\.?|number|#)", True),
+    ("ignored", r"date\s+issued", True),
+    ("ignored", r"(?:policy|group|member)\s+(?:id|number|no\.?|#)", True),
+    ("ignored", r"copay(?:\s+received)?", True),
+    ("ignored", r"balance(?:\s+due)?", True),
+    ("ignored", r"phone(?:\s+(?:number|no\.?))?", True),
+    ("ignored", r"tel(?:ephone)?", True),
+    ("ignored", r"fax", True),
+    ("ignored", r"address", True),
+    ("ignored", r"e-?mail", False),
+    ("ignored", r"npi", True),
+    ("ignored", r"tax\s+id", True),
+    ("ignored", r"(?:sex|gender)", True),
+    ("patient_full_name", r"patient\s+name", True),
+    ("patient_full_name", r"name\s+of\s+patient", True),
+    ("patient_full_name", r"patient", False),
+    ("patient_date_of_birth", r"date\s+of\s+birth", True),
+    ("patient_date_of_birth", r"birth\s+date", True),
+    ("patient_date_of_birth", r"dob", True),
+    ("patient_id", r"patient\s+id", True),
+    ("patient_id", r"patient\s*#", True),
+    ("patient_id", r"mrn", True),
+    ("patient_id", r"medical\s+record\s+(?:number|no\.?|#)", True),
+    ("patient_id", r"account\s+(?:number|no\.?|#)", True),
+    ("physician_name", r"rendering\s+provider", True),
+    ("physician_name", r"referring\s+physician", True),
+    ("physician_name", r"physician(?:\s+name)?", True),
+    ("physician_name", r"provider(?:\s+name)?", False),
+    ("physician_name", r"doctor", False),
+    ("date_of_service", r"date\s+of\s+service", True),
+    ("date_of_service", r"service\s+date", True),
+    ("date_of_service", r"dos", False),
+    ("place_of_service", r"place\s+of\s+service", True),
+    ("place_of_service", r"pos", False),
+    ("total_charges", r"total\s+(?:charges?|fees?|amount)", True),
+    ("total_charges", r"grand\s+total", True),
+]
+_SEP_STRICT = r"(?:\s*[:：]\s*|\s{2,}|\t+)"
+_SEP_LOOSE = r"(?:\s*[:：]\s*|\s{2,}|\t+|\s(?=(?-i:[A-Z0-9$(]))|\s*$)"
 
 
 def _build_label_regex() -> tuple[re.Pattern[str], dict[str, str]]:
     names: dict[str, str] = {}
     alternatives = []
-    for index, (fld, patterns) in enumerate(_LABELS.items()):
-        for pattern in patterns:
-            group = f"f{index}_{len(alternatives)}"
-            names[group] = fld
-            alternatives.append(f"(?P<{group}>{pattern})")
-    # Les libellés les plus longs d'abord est garanti par l'ordre de déclaration par champ ;
-    # on trie globalement par longueur décroissante du motif pour éviter « patient » avant « patient id ».
-    ordered = sorted(alternatives, key=len, reverse=True)
-    regex = re.compile(r"(?<![\w])(?:" + "|".join(ordered) + r")" + _SEP, re.IGNORECASE)
+    for index, (fld, pattern, loose) in enumerate(_LABELS):
+        group = f"l{index}"
+        names[group] = fld
+        sep = _SEP_LOOSE if loose else _SEP_STRICT
+        alternatives.append(f"(?P<{group}>{pattern}){sep}")
+    regex = re.compile(r"(?<![\w])(?:" + "|".join(alternatives) + r")", re.IGNORECASE)
     return regex, names
 
 
@@ -85,8 +98,20 @@ _MONEY = re.compile(r"^\$?\d[\d,]*\.\d{2}$")
 _MONTHS = {
     m: i + 1
     for i, m in enumerate(
-        ["january", "february", "march", "april", "may", "june", "july", "august", "september",
-         "october", "november", "december"]
+        [
+            "january",
+            "february",
+            "march",
+            "april",
+            "may",
+            "june",
+            "july",
+            "august",
+            "september",
+            "october",
+            "november",
+            "december",
+        ]
     )
 }
 
@@ -129,7 +154,8 @@ def _extract_fields(lines: list[str]) -> dict[str, str]:
     pending: str | None = None  # libellé seul en fin de ligne : la valeur est sur la ligne suivante
     for line in lines:
         if pending is not None:
-            found.setdefault(pending, line.strip())
+            if not _LABEL_RE.match(line):
+                found.setdefault(pending, line.strip())
             pending = None
         matches = list(_LABEL_RE.finditer(line))
         for i, match in enumerate(matches):
@@ -158,10 +184,18 @@ def _section(lines: list[str], heading: re.Pattern[str], other: re.Pattern[str])
     return []
 
 
+def _looks_like_code(token: str) -> bool:
+    return bool(ICD10CM.match(token.upper()) or CPT.match(token.upper()))
+
+
 def _split_code(row: str) -> tuple[str, str] | None:
     tokens = row.split()
-    if len(tokens) >= 2 and re.fullmatch(r"\d{1,2}[.)]?", tokens[0]):
-        tokens = tokens[1:]  # numéro de ligne
+    if (
+        len(tokens) >= 2
+        and re.fullmatch(r"(?:\d{1,2}|[A-Za-z])[.)]?", tokens[0])
+        and _looks_like_code(tokens[1].strip(",;"))
+    ):
+        tokens = tokens[1:]  # référence ou numéro de ligne (« A », « 1 »)
     if not tokens:
         return None
     return tokens[0].strip(",;"), " ".join(tokens[1:]).strip(" -–:")
@@ -179,10 +213,9 @@ def _parse_diagnoses(section: list[str]) -> tuple[Diagnosis, ...]:
 def _parse_procedures(section: list[str]) -> tuple[Procedure, ...]:
     if not section:
         return ()
-    has_units_column = bool(re.search(r"\b(?:units?|qty|quantity)\b", section[0], re.I)) or any(
-        re.search(r"\b(?:units?|qty|quantity)\b", row, re.I) and not _split_is_code(row)
-        for row in section[1:3]
-    )
+    header = " ".join(row for row in section[:3] if not _split_is_code(row))
+    has_units_column = bool(re.search(r"\b(?:units?|qty|quantity)\b", header, re.I))
+    has_dx_column = bool(re.search(r"\bdx\b|diagnos\w*\s+(?:ref|pointer)|\bpointer", header, re.I))
     rows = []
     for row in section[1:]:
         split = _split_code(row)
@@ -194,6 +227,11 @@ def _parse_procedures(section: list[str]) -> tuple[Procedure, ...]:
         units = None
         if has_units_column and tokens and re.fullmatch(r"\d{1,3}", tokens[-1]):
             units = int(tokens.pop())
+        if has_dx_column and tokens and re.fullmatch(r"[A-L],?", tokens[-1]):
+            # Références de diagnostic (« A, B ») : la dernière, puis les « X, » qui la précèdent.
+            tokens.pop()
+            while tokens and re.fullmatch(r"[A-L],", tokens[-1]):
+                tokens.pop()
         rows.append(Procedure(split[0].upper(), " ".join(tokens).strip(" -–:"), units))
     return tuple(rows)
 

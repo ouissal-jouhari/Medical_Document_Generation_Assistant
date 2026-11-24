@@ -72,6 +72,18 @@ def test_F04_clean_pdf_fixture_matches_expected_data() -> None:
     assert to_dict(canonical(parse_superbill_text(result.text, result.pages))) == expected
 
 
+def test_F04_annex_a_sample_superbill_matches_expected_data() -> None:
+    """Superbill d'exemple de l'Annexe A du SRS (PDF fourni) : champs obligatoires extraits."""
+    content = (FIXTURES / "annex_a_sample.pdf").read_bytes()
+    result = HybridOcrProvider(docling=_NeverCalled()).extract_text(content, "application/pdf")
+    assert result.engine == "text-layer"
+    expected = json.loads((FIXTURES / "annex_a_sample.expected.json").read_text(encoding="utf-8"))
+    data = canonical(parse_superbill_text(result.text, result.pages))
+    assert to_dict(data) == expected
+    assert missing_required(data) == []
+    assert not has_blocking_issue(validate(data, load_known_icd()))
+
+
 class _NeverCalled:
     def convert_to_markdown(self, content: bytes, suffix: str) -> str:
         raise AssertionError("Docling ne doit pas être appelé quand le texte direct suffit")

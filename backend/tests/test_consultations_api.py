@@ -15,16 +15,17 @@ from tests.superbill_samples import (
     EXPECTED_CLEAN,
     blank_pdf,
     encrypted_pdf,
-    image_bytes,
     pdf_with_text,
 )
 
 PDF = ("superbill.pdf", "application/pdf")
 
 
-def _upload(api: Api, content: bytes, name: str = "superbill.pdf", **auth: object) -> Any:
+def _upload(
+    api: Api, content: bytes, *, name: str = "superbill.pdf", subject: str = "user-a"
+) -> Any:
     return api.client.post(
-        "/consultations", files={"file": (name, content)}, headers=api.headers(**auth)
+        "/consultations", files={"file": (name, content)}, headers=api.headers(subject=subject)
     )
 
 
@@ -32,9 +33,9 @@ def _logs(log_dir: Path) -> str:
     return "\n".join(p.read_text(encoding="utf-8") for p in log_dir.glob("xeleron.log*"))
 
 
-def _parsed(api: Api, **auth: object) -> str:
+def _parsed(api: Api, subject: str = "user-a") -> str:
     api.ocr.text = CLEAN_TEXT
-    response = _upload(api, pdf_with_text(CLEAN_TEXT), **auth)
+    response = _upload(api, pdf_with_text(CLEAN_TEXT), subject=subject)
     assert response.status_code == 201, response.text
     return str(response.json()["id"])
 
@@ -64,15 +65,13 @@ def test_F03_valid_pdf_creates_a_consultation_parsed(api: Api) -> None:
 def test_F03_refused_file_creates_no_consultation(
     api: Api, content: bytes, name: str, status: int, code: str
 ) -> None:
-    response = _upload(api, content, name)
+    response = _upload(api, content, name=name)
     assert response.status_code == status
     assert response.json() == {"detail": code}
     assert api.client.get("/consultations", headers=api.headers()).json() == []
 
 
-def test_F03_file_over_the_api_limit_is_refused(
-    api: Api, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_F03_file_over_the_api_limit_is_refused(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
     from app.core.config import get_settings
 
     monkeypatch.setenv("MAX_UPLOAD_BYTES", "1000")
@@ -210,20 +209,20 @@ def test_F05_unchanged_save_records_no_correction(api: Api) -> None:
 
 def test_F05_state_changes_to_validated_only_after_explicit_validation(api: Api) -> None:
     consultation_id = _parsed(api)
-    assert api.client.get(f"/consultations/{consultation_id}", headers=api.headers()).json()[
-        "state"
-    ] == "parsed"
+    assert (
+        api.client.get(f"/consultations/{consultation_id}", headers=api.headers()).json()["state"]
+        == "parsed"
+    )
     api.client.put(
         f"/consultations/{consultation_id}/data",
         json=_edit(EXPECTED_CLEAN),
         headers=api.headers(),
     )
-    assert api.client.get(f"/consultations/{consultation_id}", headers=api.headers()).json()[
-        "state"
-    ] == "parsed"
-    validated = api.client.post(
-        f"/consultations/{consultation_id}/validate", headers=api.headers()
+    assert (
+        api.client.get(f"/consultations/{consultation_id}", headers=api.headers()).json()["state"]
+        == "parsed"
     )
+    validated = api.client.post(f"/consultations/{consultation_id}/validate", headers=api.headers())
     assert validated.status_code == 200
     assert validated.json()["state"] == "validated"
 
@@ -231,7 +230,8 @@ def test_F05_state_changes_to_validated_only_after_explicit_validation(api: Api)
 def test_F05_validation_is_blocked_by_invalid_data_without_echoing_values(api: Api) -> None:
     consultation_id = _parsed(api)
     body = _edit(EXPECTED_CLEAN)
-    body["diagnoses"][0]["code"] = f"I1O-{CANARY}"
+    body["diagnoses"][0]["code"] = "I1O.9"
+    body["diagnoses"][0]["description"] = CANARY
     body["patient"]["dateOfBirth"] = "12/04/1980"
     api.client.put(f"/consultations/{consultation_id}/data", json=body, headers=api.headers())
     response = api.client.post(f"/consultations/{consultation_id}/validate", headers=api.headers())
@@ -241,7 +241,8 @@ def test_F05_validation_is_blocked_by_invalid_data_without_echoing_values(api: A
     pairs = {(i["field"], i["code"]) for i in result["issues"]}
     assert ("patient.dateOfBirth", "invalid_date") in pairs
     assert ("diagnoses[0].code", "invalid_icd10cm_format") in pairs
-    assert CANARY not in response.text and "12/04/1980" not in response.text
+    assert CANARY not in response.text
+    assert "12/04/1980" not in response.text and "I1O.9" not in response.text
     state = api.client.get(f"/consultations/{consultation_id}", headers=api.headers()).json()
     assert state["state"] == "parsed"
 
@@ -257,7 +258,9 @@ def test_F05_unknown_icd_code_warns_but_does_not_block_validation(api: Api) -> N
         "issues"
     ]
     assert (
-        api.client.post(f"/consultations/{consultation_id}/validate", headers=api.headers()).status_code
+        api.client.post(
+            f"/consultations/{consultation_id}/validate", headers=api.headers()
+        ).status_code
         == 200
     )
 
@@ -278,12 +281,12 @@ def test_F05_validated_data_is_locked(api: Api) -> None:
 def test_F05_uploaded_consultation_cannot_be_edited_or_validated(api: Api) -> None:
     api.ocr.error = ExtractionError()
     consultation_id = _upload(api, blank_pdf(1)).json()["id"]
-    put = api.client.put(
-        f"/consultations/{consultation_id}/data", json={}, headers=api.headers()
-    )
+    put = api.client.put(f"/consultations/{consultation_id}/data", json={}, headers=api.headers())
     assert put.status_code == 409
     assert (
-        api.client.post(f"/consultations/{consultation_id}/validate", headers=api.headers()).status_code
+        api.client.post(
+            f"/consultations/{consultation_id}/validate", headers=api.headers()
+        ).status_code
         == 409
     )
 
@@ -315,14 +318,19 @@ def test_F25_other_clinician_cannot_list_read_edit_validate_or_redeposit(api: Ap
     ]
     for method, suffix, kwargs in calls:
         foreign = api.client.request(
-            method, f"/consultations/{consultation_id}{suffix}", headers=api.headers(**other), **kwargs
+            method,
+            f"/consultations/{consultation_id}{suffix}",
+            headers=api.headers(**other),
+            **kwargs,
         )
         absent = api.client.request(
             method, f"/consultations/{missing}{suffix}", headers=api.headers(**other), **kwargs
         )
         assert (foreign.status_code, foreign.json()) == (absent.status_code, absent.json())
         assert foreign.status_code == 404
-    owner = api.client.get(f"/consultations/{consultation_id}", headers=api.headers(subject="clin-a"))
+    owner = api.client.get(
+        f"/consultations/{consultation_id}", headers=api.headers(subject="clin-a")
+    )
     assert owner.json()["state"] == "parsed"
 
 

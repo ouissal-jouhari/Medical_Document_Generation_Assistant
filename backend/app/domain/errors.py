@@ -68,7 +68,7 @@ class WrongState(SafeError):
 
 
 class ValidationFailed(SafeError):
-    """Données incomplètes ou invalides : `extra["issues"]` liste champ et code, jamais la valeur."""
+    """Données incomplètes ou invalides : `extra["issues"]` liste champ et code, sans valeur."""
 
     code = "validation_failed"
 

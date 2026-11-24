@@ -30,7 +30,10 @@ def _out(
         extraction_failures=consultation.extraction_failures,
         extraction=extraction,
         data=consultation.data,
-        issues=[IssueOut(field=i.field, code=i.code, blocking=i.blocking) for i in service.issues(consultation)],
+        issues=[
+            IssueOut(field=i.field, code=i.code, blocking=i.blocking)
+            for i in service.issues(consultation)
+        ],
         corrections=[
             CorrectionOut(field=c.field, author_id=c.author_id, changed_at=c.changed_at)
             for c in service.corrections(consultation)
@@ -57,7 +60,7 @@ def list_consultations(
             patient_name=((c.data or {}).get("patient") or {}).get("fullName"),
             extraction_failures=c.extraction_failures,
         )
-        for c in service.list(user.id)
+        for c in service.list_for_author(user.id)
     ]
 
 

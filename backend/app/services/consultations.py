@@ -67,7 +67,7 @@ class ConsultationService:
         return self._max_bytes
 
     # -- lecture ---------------------------------------------------------------------------
-    def list(self, author_id: UUID) -> list[Consultation]:
+    def list_for_author(self, author_id: UUID) -> list[Consultation]:
         return sorted(self._repo.list(author_id), key=lambda c: c.created_at, reverse=True)
 
     def get(self, author_id: UUID, consultation_id: UUID) -> Consultation:

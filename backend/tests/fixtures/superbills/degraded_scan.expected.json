@@ -1,0 +1,42 @@
+{
+  "patient": {
+    "fullName": "Jane Doe",
+    "dateOfBirth": "1980-04-12",
+    "patientId": "P-000123"
+  },
+  "physician": {
+    "name": "Dr. Alice Martin"
+  },
+  "encounter": {
+    "dateOfService": "2026-11-20",
+    "placeOfService": "Office"
+  },
+  "diagnoses": [
+    {
+      "code": "E11.9",
+      "description": "Type 2 diabetes mellitus without complications"
+    },
+    {
+      "code": "I10",
+      "description": "Essential (primary) hypertension"
+    }
+  ],
+  "procedures": [
+    {
+      "code": "99213",
+      "description": "Office visit, established patient",
+      "units": 1
+    },
+    {
+      "code": "36415",
+      "description": "Collection of venous blood by venipuncture",
+      "units": 1
+    }
+  ],
+  "billing": {
+    "totalCharges": "$162.00"
+  },
+  "extraction": {
+    "pageCount": 1
+  }
+}

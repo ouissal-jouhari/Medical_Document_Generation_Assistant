@@ -1,6 +1,7 @@
 """Textes d'extraction synthétiques (données fictives) et petits fichiers de test."""
 
 import io
+from typing import Any
 
 from fpdf import FPDF
 from PIL import Image
@@ -49,7 +50,7 @@ MARKDOWN_TEXT = """## Northwind Family Clinic - SUPERBILL
 Total Charges: $150.00
 """
 
-EXPECTED_CLEAN = {
+EXPECTED_CLEAN: dict[str, Any] = {
     "patient": {"fullName": "Jane Doe", "dateOfBirth": "1980-04-12", "patientId": "P-000123"},
     "physician": {"name": "Dr. Alice Martin"},
     "encounter": {"dateOfService": "2026-11-20", "placeOfService": "Office"},

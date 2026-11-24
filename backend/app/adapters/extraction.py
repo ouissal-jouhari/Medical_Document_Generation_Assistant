@@ -42,7 +42,7 @@ def pdf_text_layer(content: bytes) -> tuple[str, int]:
 
 
 class HybridOcrProvider:
-    def __init__(self, docling: DoclingConverter, timeout_seconds: float = 120.0) -> None:
+    def __init__(self, docling: DoclingConverter, timeout_seconds: float = 300.0) -> None:
         self._docling = docling
         self._timeout = timeout_seconds
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="docling")

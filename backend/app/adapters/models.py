@@ -1,9 +1,8 @@
 """Tables du jalon 2. Types portables (PostgreSQL en production, SQLite possible en test)."""
 
 from datetime import datetime
-from uuid import UUID, uuid4
-
 from typing import Any
+from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB

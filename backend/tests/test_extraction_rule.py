@@ -45,17 +45,18 @@ def test_F04_pdf_without_text_layer_goes_through_docling() -> None:
 def test_F04_pdf_with_incomplete_text_layer_goes_through_docling() -> None:
     incomplete = "Patient Name: Jane Doe\nDate of Service: 11/20/2026\n"
     docling = FakeDocling()
-    result = HybridOcrProvider(docling).extract_text(
-        pdf_with_text(incomplete), "application/pdf"
-    )
+    result = HybridOcrProvider(docling).extract_text(pdf_with_text(incomplete), "application/pdf")
     assert result.engine == "docling"
     assert docling.calls == ["pdf"]
 
 
-@pytest.mark.parametrize(("fmt", "content_type", "suffix"), [
-    ("PNG", "image/png", "png"),
-    ("JPEG", "image/jpeg", "jpeg"),
-])
+@pytest.mark.parametrize(
+    ("fmt", "content_type", "suffix"),
+    [
+        ("PNG", "image/png", "png"),
+        ("JPEG", "image/jpeg", "jpeg"),
+    ],
+)
 def test_F04_images_always_go_through_docling(fmt: str, content_type: str, suffix: str) -> None:
     docling = FakeDocling()
     result = HybridOcrProvider(docling).extract_text(image_bytes(fmt), content_type)

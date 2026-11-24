@@ -1,0 +1,31 @@
+{
+  "patient": {
+    "fullName": "Marcus Ellery Thorne",
+    "dateOfBirth": "1968-03-14",
+    "patientId": "MGMC-0048172"
+  },
+  "physician": {
+    "name": "Helena Marsh, MD"
+  },
+  "encounter": {
+    "dateOfService": "2026-11-16",
+    "placeOfService": "22 – Outpatient hospital"
+  },
+  "diagnoses": [
+    { "code": "R07.89", "description": "Other chest pain" },
+    { "code": "I10", "description": "Essential (primary) hypertension" },
+    { "code": "E11.9", "description": "Type 2 diabetes mellitus without complications" }
+  ],
+  "procedures": [
+    { "code": "99214", "description": "Office visit, established patient, moderate complexity", "units": 1 },
+    { "code": "93000", "description": "Electrocardiogram, 12 leads, with interpretation and report", "units": 1 },
+    { "code": "36415", "description": "Routine venipuncture (blood draw)", "units": 1 },
+    { "code": "84484", "description": "Troponin, quantitative", "units": 1 }
+  ],
+  "billing": {
+    "totalCharges": "$280.00"
+  },
+  "extraction": {
+    "pageCount": 1
+  }
+}
