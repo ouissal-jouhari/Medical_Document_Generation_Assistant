@@ -5,6 +5,7 @@ import structlog
 from fastapi import FastAPI, Request, Response
 
 from app.api.routes.health import router as health_router
+from app.api.routes.me import router as me_router
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers, route_template
 from app.core.logging import configure_logging
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
         return response
 
     app.include_router(health_router)
+    app.include_router(me_router)
     return app
 
 

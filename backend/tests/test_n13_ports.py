@@ -63,7 +63,7 @@ class FakeLlm:
 
 class FakeIdentity:
     def verify_token(self, token: str) -> Identity:
-        return Identity(subject="u", roles=("doctor",), mfa_verified=True)
+        return Identity(subject="u", display_name="U", roles=("clinician",), mfa_verified=True)
 
 
 class FakeTranscript:

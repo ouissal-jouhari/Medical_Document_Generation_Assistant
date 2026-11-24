@@ -8,6 +8,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.domain.errors import SafeError
+
 log = structlog.get_logger()
 
 
@@ -34,6 +36,24 @@ async def http_error_handler(request: Request, exc: Exception) -> JSONResponse:
     )
 
 
+SAFE_STATUS = {
+    "authentication_required": 401,
+    "session_invalid": 401,
+    "mfa_required": 403,
+    "forbidden": 403,
+    "not_found": 404,
+    "identity_provider_unavailable": 503,
+}
+
+
+async def safe_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    code = cast(SafeError, exc).code
+    status = SAFE_STATUS.get(code, 400)
+    log.info("safe_error", route=route_template(request), code=code, status=status)
+    headers = {"WWW-Authenticate": "Bearer"} if status == 401 else None
+    return JSONResponse(status_code=status, content={"detail": code}, headers=headers)
+
+
 async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
     # Le message d'une exception peut contenir une donnée patient : seul le type est journalisé.
     log.error("unhandled_error", route=route_template(request), error_type=type(exc).__name__)
@@ -42,5 +62,6 @@ async def unhandled_error_handler(request: Request, exc: Exception) -> JSONRespo
 
 def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(RequestValidationError, validation_error_handler)
+    app.add_exception_handler(SafeError, safe_error_handler)
     app.add_exception_handler(StarletteHTTPException, http_error_handler)
     app.add_exception_handler(Exception, unhandled_error_handler)
