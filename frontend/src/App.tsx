@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 
 import { isCallback, userManager } from "./auth";
+import { Consultations } from "./Consultations";
+import { NewConsultation } from "./NewConsultation";
+import { ReviewData } from "./ReviewData";
 
 type View =
   | { name: "loading" }
   | { name: "login"; message: string; retry: boolean }
-  | { name: "home"; displayName: string }
+  | { name: "home"; displayName: string; token: string }
   | { name: "mfa" };
 
 // Textes fixes par code d'erreur de l'API : jamais de détail technique (N-11).
@@ -73,7 +76,7 @@ export function App() {
       }
       if (response.ok) {
         const body = (await response.json()) as { display_name: string };
-        setView({ name: "home", displayName: body.display_name });
+        setView({ name: "home", displayName: body.display_name, token: user.access_token });
         return;
       }
       const code = await errorCode(response);
@@ -92,6 +95,10 @@ export function App() {
 
   const logout = () => {
     void userManager.signoutRedirect();
+  };
+  const expired = async () => {
+    await userManager.removeUser();
+    window.location.assign("/");
   };
 
   return (
@@ -119,13 +126,61 @@ export function App() {
         </section>
       )}
       {view.name === "home" && (
-        <section aria-label="Accueil">
-          <p>Bonjour {view.displayName}</p>
-          <button type="button" onClick={logout}>
-            Se déconnecter
-          </button>
-        </section>
+        <Shell
+          token={view.token}
+          displayName={view.displayName}
+          onLogout={logout}
+          onExpired={() => void expired()}
+        />
       )}
     </main>
+  );
+}
+
+type Screen =
+  | { name: "list" }
+  | { name: "new"; existingId?: string }
+  | { name: "review"; id: string };
+
+type ShellProps = { token: string; displayName: string; onLogout: () => void; onExpired: () => void };
+
+function Shell({ token, displayName, onLogout, onExpired }: ShellProps) {
+  const [screen, setScreen] = useState<Screen>({ name: "list" });
+  return (
+    <section aria-label="Accueil">
+      <p>
+        Bonjour {displayName}{" "}
+        <button type="button" onClick={onLogout}>
+          Se déconnecter
+        </button>
+      </p>
+      {screen.name === "list" && (
+        <Consultations
+          token={token}
+          onExpired={onExpired}
+          onNew={() => setScreen({ name: "new" })}
+          onOpen={(id, state) =>
+            setScreen(state === "uploaded" ? { name: "new", existingId: id } : { name: "review", id })
+          }
+        />
+      )}
+      {screen.name === "new" && (
+        <NewConsultation
+          token={token}
+          existingId={screen.existingId}
+          onExpired={onExpired}
+          onCancel={() => setScreen({ name: "list" })}
+          onParsed={(id) => setScreen({ name: "review", id })}
+        />
+      )}
+      {screen.name === "review" && (
+        <ReviewData
+          token={token}
+          id={screen.id}
+          onExpired={onExpired}
+          onBack={() => setScreen({ name: "list" })}
+        />
+      )}
+    </section>
   );
 }
