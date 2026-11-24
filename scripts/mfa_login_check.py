@@ -1,7 +1,7 @@
 """Vérification de bout en bout de F-01 sur la pile Docker Compose démarrée (jalon 2).
 
-1. Connexion réelle (PKCE) avec mot de passe puis TOTP : le jeton porte acr=2 et l'API répond 200.
 1. Connexion réelle (PKCE), mot de passe puis TOTP : jeton acr=2, l'API répond 200.
+2. Connexion mono-facteur (niveau 1 demandé) : jeton acr=1, l'API répond 403 mfa_required.
 
 Variables d'environnement : BASE_URL (défaut https://localhost), KC_TEST_USER_PASSWORD,
 KC_TEST_USER_TOTP_SECRET (secret brut, comme dans le realm importé).
