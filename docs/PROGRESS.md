@@ -1,11 +1,12 @@
 # Progression XeleronIA
 ## Fait
-- Jalon 2 : TERMINÉ (validé par l'utilisateur). CI verte, MFA réel vérifié en CI et à la main dans le navigateur.
+- Jalon 2 : TERMINÉ (validé).
 ## En cours
-Jalon 3 : Superbill, dépôt, extraction, vérification.
+Jalon 3 : tâches 1 à 7 faites, CI verte (105 tests, Docling réel, dépôt de l'Annexe A sur la pile). En attente de « jalon validé ».
 ## Reste ouvert (écarts notés)
-- Jalon 1 : hôte DEV (P13) et preuve du chiffrement au repos, toujours en attente ; « jalon validé » du jalon 1 non donné.
+- Jalon 1 : hôte DEV (P13), déploiement DEV, preuve du chiffrement au repos ; « jalon validé » non donné.
 - Jalon 2 : test automatique de la redirection navigateur (Playwright) reporté au jalon 7.
+- Jalon 3 : extraction d'un scan à froid : 43 s en CI, 90 à 110 s sur le poste (objectif 20 s non atteint, mesuré, ADR 0007). Docling peut perdre des lignes de tableau : à mesurer au jalon 7.
 ## Notes
-- ADR 0004 (front PKCE), 0005 (MFA via acr, confirmé Keycloak 26.0.8), 0006 (audit, rôles de base).
+- ADR 0007 (extraction), 0008 (parsing, échecs, corrections), 0009 (fichiers, table ICD-10-CM FY2026).
 - Placeholders change-me-* dans .env : à remplacer avant tout déploiement hébergé.

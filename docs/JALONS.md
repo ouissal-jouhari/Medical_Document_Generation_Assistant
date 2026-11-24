@@ -49,7 +49,7 @@ Dire : « Démarre le jalon N ». Le contenu du jalon N est alors lu, puis exéc
 |---|---|---|---|---|
 | 1 | Socle technique et CI/CD | S1 | j1–j4 | EN COURS (DEV et validation reportés) |
 | 2 | Authentification, contrôle d'accès et audit | S1–S2 | j5–j8 | TERMINÉ |
-| 3 | Superbill : dépôt, extraction, vérification | S2–S3 | j9–j15 | À FAIRE |
+| 3 | Superbill : dépôt, extraction, vérification | S2–S3 | j9–j15 | EN COURS (validation en attente) |
 | 4 | Texte de consultation et génération | S4–S5 | j16–j23 | À FAIRE |
 | 5 | Revue, versions et approbation | S5–S6 | j24–j30 | À FAIRE |
 | 6 | Export, provenance, suppression et conservation | S7 | j31–j35 | À FAIRE |
@@ -206,15 +206,15 @@ R-02, R-07
 - L'action « supprimer » de E-02 est livrée au jalon 6 ; son emplacement dans l'écran est prévu ici.
 
 ### Porte de sortie du jalon 3
-- [ ] Tâches 1 à 7 faites
-- [ ] F-03 vérifié (fichier hors limites ou autre format : refusé, aucune consultation créée ; limite de taille appliquée par Caddy et vérifiée dans l'API)
-- [ ] F-04 vérifié sur la Superbill synthétique fournie
-- [ ] F-05 vérifié (modification tracée ; Validated seulement après validation explicite)
-- [ ] F-06 vérifié (état Uploaded conservé, nouveau dépôt possible, échec compté)
-- [ ] N-06 vérifié (type réel contrôlé : un fichier renommé est refusé)
-- [ ] N-11 : message sûr, sans trace technique, pour fichier invalide et extraction ratée
-- [ ] Canari absent des logs ; F-25 rejoué sur les routes de consultation
-- [ ] Pipeline CI vert
+- [x] Tâches 1 à 7 faites (jeu d'évaluation amorcé : Annexe A en PDF, PDF synthétique propre, scan dégradé, fichier invalide renommé, dans backend/tests/fixtures/superbills/)
+- [x] F-03 vérifié (test_F03_*, test_N06_* : format, 3 pages, 50 Mo, PDF chiffré, fichier corrompu, image piégée refusés sans créer de consultation ; limite appliquée par Caddy et vérifiée dans l'API : scripts/mfa_login_check.py rejoué en CI sur la vraie pile, 413 de l'API puis de Caddy)
+- [x] F-04 vérifié sur la Superbill de l'Annexe A (test_F04_annex_a_sample_* : champs obligatoires extraits, conformes au schéma ; dépôt réel sur la pile en CI : état parsed) ; scan dégradé lu par Docling réel (job CI « ocr »)
+- [x] F-05 vérifié (test_F05_* sur SQLite et PostgreSQL : modification tracée avec auteur et date, extraction d'origine conservée, Validated seulement après validation explicite, validation bloquée par les problèmes bloquants)
+- [x] F-06 vérifié (test_F06_* : état Uploaded conservé, nouveau dépôt possible sur la même consultation, échec compté)
+- [x] N-06 vérifié (test_N06_* : fichier renommé refusé, type réel doit correspondre à l'extension)
+- [x] N-11 : message sûr, sans trace technique, pour fichier invalide et extraction ratée (test_N11_*)
+- [x] Canari absent des logs ; F-25 rejoué sur toutes les routes de consultation (test_F25_*, test_N08_original_file_name_*)
+- [x] Pipeline CI vert (run 45321481250 : qualité 105 tests dont PostgreSQL, sécurité, ocr, smoke, publication des images avec modèles Docling)
 - [ ] Utilisateur : « jalon validé »
 
 ---
