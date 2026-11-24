@@ -13,13 +13,18 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.adapters.db import make_engine
+from app.adapters.docling_converter import DoclingMarkdownConverter
+from app.adapters.extraction import HybridOcrProvider
+from app.adapters.icd_table import load_known_icd
 from app.adapters.models import User
 from app.adapters.oidc import OidcIdentityProvider
+from app.adapters.storage import LocalFileStore
 from app.core.config import get_settings
 from app.domain.auth import Permission, permissions_of
 from app.domain.clock import Clock, SystemClock
 from app.domain.errors import AuthenticationRequired, Forbidden, MfaRequired
-from app.ports import IdentityProvider
+from app.ports import IdentityProvider, OcrProvider
+from app.services.consultations import ConsultationService
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -99,3 +104,36 @@ def require_permission(permission: Permission) -> Callable[[CurrentUser], Curren
 
 
 ClinicianUser = Annotated[CurrentUser, Depends(require_permission(Permission.USE_DOCUMENTS))]
+
+
+@lru_cache
+def get_ocr_provider() -> OcrProvider:
+    settings = get_settings()
+    return HybridOcrProvider(
+        DoclingMarkdownConverter(settings.docling_artifacts_path),
+        settings.extraction_timeout_seconds,
+    )
+
+
+@lru_cache
+def get_known_icd() -> frozenset[str]:
+    return load_known_icd()
+
+
+def get_file_store() -> LocalFileStore:
+    return LocalFileStore(get_settings().storage_dir)
+
+
+def get_consultation_service(
+    session: Session = Depends(get_session),
+    clock: Clock = Depends(get_clock),
+    ocr: OcrProvider = Depends(get_ocr_provider),
+    store: LocalFileStore = Depends(get_file_store),
+    known_icd: frozenset[str] = Depends(get_known_icd),
+) -> ConsultationService:
+    return ConsultationService(
+        session, clock, ocr, store, known_icd, get_settings().max_upload_bytes
+    )
+
+
+ConsultationServiceDep = Annotated[ConsultationService, Depends(get_consultation_service)]

@@ -43,15 +43,25 @@ SAFE_STATUS = {
     "forbidden": 403,
     "not_found": 404,
     "identity_provider_unavailable": 503,
+    "unsupported_format": 415,
+    "file_too_large": 413,
+    "too_many_pages": 422,
+    "encrypted_pdf": 422,
+    "corrupt_file": 422,
+    "image_too_large": 422,
+    "wrong_state": 409,
+    "validation_failed": 422,
 }
 
 
 async def safe_error_handler(request: Request, exc: Exception) -> JSONResponse:
-    code = cast(SafeError, exc).code
+    safe = cast(SafeError, exc)
+    code = safe.code
     status = SAFE_STATUS.get(code, 400)
     log.info("safe_error", route=route_template(request), code=code, status=status)
     headers = {"WWW-Authenticate": "Bearer"} if status == 401 else None
-    return JSONResponse(status_code=status, content={"detail": code}, headers=headers)
+    content = {"detail": code, **safe.extra}
+    return JSONResponse(status_code=status, content=content, headers=headers)
 
 
 async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:

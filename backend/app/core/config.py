@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     oidc_client_id: str = "xeleron-web"
     # Niveau d'authentification (claim acr) que Keycloak émet après le second facteur.
     oidc_required_acr: str = "2"
+    # Superbills : stockage (volume chiffré par l'hôte), limite de taille, extraction.
+    storage_dir: str = "storage"
+    max_upload_bytes: int = 50 * 1024 * 1024
+    docling_artifacts_path: str | None = None
+    extraction_timeout_seconds: float = 120.0
 
 
 @lru_cache
