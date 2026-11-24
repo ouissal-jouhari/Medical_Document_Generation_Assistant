@@ -13,6 +13,7 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "structlog>=24.4",
     "pyyaml>=6.0",
+    "pyjwt[crypto]>=2.9",
 ]
 
 [dependency-groups]
@@ -31,6 +32,9 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Security"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]

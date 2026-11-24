@@ -13,6 +13,7 @@ class OcrResult:
 @dataclass(frozen=True)
 class Identity:
     subject: str
+    display_name: str
     roles: tuple[str, ...]
     mfa_verified: bool
 
