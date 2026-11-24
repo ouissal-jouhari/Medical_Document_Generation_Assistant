@@ -38,9 +38,7 @@ EXPECTED = {
     "physician": {"name": "Dr. Alice Martin"},
     "encounter": {"dateOfService": "2026-11-20", "placeOfService": "Office"},
     "diagnoses": [{"code": c, "description": d} for c, d in DIAGNOSES],
-    "procedures": [
-        {"code": c, "description": d, "units": int(u)} for c, d, u, _ in PROCEDURES
-    ],
+    "procedures": [{"code": c, "description": d, "units": int(u)} for c, d, u, _ in PROCEDURES],
     "billing": {"totalCharges": "$162.00"},
 }
 
@@ -80,7 +78,7 @@ def make_pdf(path: Path) -> None:
 
 
 def make_degraded_scan(path: Path) -> None:
-    random.seed(7)
+    rng = random.Random(7)  # noqa: S311 - bruit d'image reproductible, sans usage cryptographique
     image = Image.new("L", (1700, 2200), 255)
     draw = ImageDraw.Draw(image)
     font = ImageFont.load_default(size=34)
@@ -118,10 +116,11 @@ def make_degraded_scan(path: Path) -> None:
     image = image.rotate(1.2, resample=Image.Resampling.BICUBIC, fillcolor=255)
     image = image.filter(ImageFilter.GaussianBlur(1.1))
     noisy = image.load()
-    assert noisy is not None
+    if noisy is None:
+        raise SystemExit("image illisible")
     for _ in range(60000):
-        x, y = random.randrange(image.width), random.randrange(image.height)
-        noisy[x, y] = random.choice((0, 90, 160))
+        x, y = rng.randrange(image.width), rng.randrange(image.height)
+        noisy[x, y] = rng.choice((0, 90, 160))
     image.save(path, format="PNG")
 
 
