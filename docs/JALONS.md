@@ -49,7 +49,7 @@ Dire : « Démarre le jalon N ». Le contenu du jalon N est alors lu, puis exéc
 |---|---|---|---|---|
 | 1 | Socle technique et CI/CD | S1 | j1–j4 | EN COURS (DEV et validation reportés) |
 | 2 | Authentification, contrôle d'accès et audit | S1–S2 | j5–j8 | TERMINÉ |
-| 3 | Superbill : dépôt, extraction, vérification | S2–S3 | j9–j15 | EN COURS (validation en attente) |
+| 3 | Superbill : dépôt, extraction, vérification | S2–S3 | j9–j15 | TERMINÉ (validé par l'utilisateur) |
 | 4 | Texte de consultation et génération | S4–S5 | j16–j23 | À FAIRE |
 | 5 | Revue, versions et approbation | S5–S6 | j24–j30 | À FAIRE |
 | 6 | Export, provenance, suppression et conservation | S7 | j31–j35 | À FAIRE |
@@ -104,7 +104,7 @@ R-06
 - [x] N-15 vérifié (job CI smoke : pile complète démarrée, /api/health via Caddy)
 - [x] N-08 vérifié (canari : logs et erreurs sans donnée patient, 5 tests)
 - [ ] Pipeline CI vert (fait : run 45293186964 vert, images publiées sur GHCR) ; **DEV déployé : en attente de l'hôte (P13)**
-- [ ] Utilisateur : « jalon validé »
+- [x] Utilisateur : « jalon validé »
 
 ---
 

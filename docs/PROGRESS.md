@@ -1,8 +1,9 @@
 # Progression XeleronIA
 ## Fait
 - Jalon 2 : TERMINÉ (validé).
+- Jalon 3 : TERMINÉ (validé le 2026-11-26).
 ## En cours
-Jalon 3 : tâches 1 à 7 faites, CI verte (105 tests, Docling réel, dépôt de l'Annexe A sur la pile). En attente de « jalon validé ».
+Jalon 4 : en attente de démarrage.
 ## Reste ouvert (écarts notés)
 - Jalon 1 : hôte DEV (P13), déploiement DEV, preuve du chiffrement au repos ; « jalon validé » non donné.
 - Jalon 2 : test automatique de la redirection navigateur (Playwright) reporté au jalon 7.
