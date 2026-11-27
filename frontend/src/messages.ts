@@ -18,6 +18,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   version_conflict: "The document changed in the meantime. Reload it before trying again.",
   document_approved: "This document is approved and can no longer be modified.",
   approval_blocked: "Approval is not possible yet.",
+  document_not_approved: "Export is possible after approval only.",
+  export_failed: "The PDF could not be produced. The document is unchanged. You can retry.",
 };
 
 // Éléments bloquant l'approbation (N-11) : libellés fixes, les noms de section sont affichés tels quels.

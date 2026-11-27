@@ -140,6 +140,10 @@ export async function api<T>(token: string, path: string, init: RequestInit = {}
   }
   if (response.status === 204) return undefined as T;
   if (response.ok) return (await response.json()) as T;
+  throw await errorOf(response);
+}
+
+async function errorOf(response: Response): Promise<ApiError> {
   let code = "error";
   let issues: Issue[] = [];
   let missing: string[] = [];
@@ -155,7 +159,29 @@ export async function api<T>(token: string, path: string, init: RequestInit = {}
   } catch {
     // corps absent ou illisible : code générique
   }
-  throw new ApiError(response.status, code, issues, missing);
+  return new ApiError(response.status, code, issues, missing);
+}
+
+// Fichier produit par l'API (PDF clinique ou rapport de provenance), téléchargé sur l'appareil local.
+export async function download(token: string, path: string): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    throw new ApiError(0, "network_error");
+  }
+  if (!response.ok) throw await errorOf(response);
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? "document.pdf";
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 export function upload(token: string, path: string, file: File): Promise<Consultation> {

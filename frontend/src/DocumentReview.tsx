@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ApiError,
   api,
+  download,
   type DocumentContent,
   type DocumentSection,
   type DocumentSource,
@@ -143,6 +144,22 @@ export function DocumentReview({ token, id, onExpired, onBack, onOpen }: Props) 
         }),
       "Saved as a new version.",
     );
+  const exportFile = async (path: string, done: string) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await download(token, `/documents/${id}/${path}`);
+      setNotice(done);
+    } catch (e: unknown) {
+      fail(e);
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  };
   const createNew = async () => {
     if (inFlight.current) return;
     inFlight.current = true;
@@ -272,6 +289,24 @@ export function DocumentReview({ token, id, onExpired, onBack, onOpen }: Props) 
             )}
           </>
         )}
+        {approved && (
+          <>
+            <button
+              type="button"
+              onClick={() => void exportFile("export", "PDF exported.")}
+              disabled={busy}
+            >
+              Export PDF
+            </button>{" "}
+          </>
+        )}
+        <button
+          type="button"
+          onClick={() => void exportFile("provenance-report", "Provenance report downloaded.")}
+          disabled={busy || changed.length > 0}
+        >
+          Provenance report
+        </button>{" "}
         {approved && (
           <button type="button" onClick={() => void createNew()} disabled={busy}>
             {busy ? "Generating…" : "Create new document"}
