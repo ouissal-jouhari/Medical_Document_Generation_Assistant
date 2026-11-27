@@ -10,8 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field
 class TemplateSection(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1)
-    status: str = Field(pattern=r"^(PROVIDED|NOT_PROVIDED)$")
-    citation_required: bool = False
+    level: str = Field(pattern=r"^(REQUIRED|SAFETY|STANDARD)$")
+    description: str = ""
 
 
 class DocumentTemplate(BaseModel):

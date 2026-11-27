@@ -80,7 +80,7 @@ def test_F09_generation_requires_validated_and_supports_multiple_documents(api: 
     llm = _with_llm(api)
     llm.result = {
         "sections": [
-            {"name": "Chief Complaint", "status": "NOT_PROVIDED", "content": None, "citations": []},
+            {"name": "Subjective", "status": "NOT_PROVIDED", "content": None, "citations": []},
         ]
     }
     api.ocr.text = CLEAN_TEXT
@@ -118,13 +118,13 @@ def test_F11_missing_information_is_not_invented(api: Api) -> None:
     llm.result = {
         "sections": [
             {
-                "name": "Chief Complaint",
+                "name": "Subjective",
                 "status": "PROVIDED",
                 "content": "invented pain",
                 "citations": [],
             },
             {
-                "name": "History of Present Illness",
+                "name": "Objective",
                 "status": "NOT_PROVIDED",
                 "content": None,
                 "citations": [],
@@ -199,7 +199,7 @@ def test_F10_citations_are_limited_to_literal_source_text(api: Api) -> None:
     llm.result = {
         "sections": [
             {
-                "name": "Chief Complaint",
+                "name": "Subjective",
                 "status": "PROVIDED",
                 "content": "Persistent cough",
                 "citations": ["persistent cough"],
@@ -224,22 +224,22 @@ def test_F10_citations_are_limited_to_literal_source_text(api: Api) -> None:
     assert section["sources"][0]["start"] == 20
 
 
-def test_S02_negation_is_not_treated_as_an_affirmed_finding(api: Api) -> None:
+def test_S02_negation_without_a_source_stating_it_is_rejected(api: Api) -> None:
     llm = _with_llm(api)
     llm.result = {
         "sections": [
             {
-                "name": "Chief Complaint",
+                "name": "Allergies and adverse reactions",
                 "status": "PROVIDED",
                 "content": "No known allergies",
-                "citations": ["no known allergies"],
+                "citations": ["The patient reports a cough."],
             }
         ]
     }
     consultation_id = _validated(api)
     api.client.put(
         f"/consultations/{consultation_id}/text",
-        json={"text": "No known allergies were reported."},
+        json={"text": "The patient reports a cough."},
         headers=api.headers(),
     )
     response = api.client.post(
@@ -248,9 +248,13 @@ def test_S02_negation_is_not_treated_as_an_affirmed_finding(api: Api) -> None:
         headers=api.headers(),
     )
     assert response.status_code == 201
-    chief = response.json()["sections"]["sections"][0]
-    assert chief["status"] == "NOT_PROVIDED"
-    assert chief["content"] is None
+    section = next(
+        item
+        for item in response.json()["sections"]["sections"]
+        if item["name"] == "Allergies and adverse reactions"
+    )
+    assert section["status"] == "NOT_PROVIDED"
+    assert section["content"] is None
 
 
 def test_S03_no_text_uses_only_coded_diagnoses(api: Api) -> None:
@@ -263,14 +267,10 @@ def test_S03_no_text_uses_only_coded_diagnoses(api: Api) -> None:
         headers=api.headers(),
     )
     assert response.status_code == 201
-    section = next(
-        item
-        for item in response.json()["sections"]["sections"]
-        if item["name"] == "Discharge Diagnosis"
-    )
-    assert section["status"] == "PROVIDED"
-    assert "E11.9" in section["content"]
-    assert "No known allergies" not in section["content"]
+    body = response.json()["sections"]
+    codes = [item["code"] for item in body["common_block"]["diagnoses"]]
+    assert "E11.9" in codes
+    assert all(item["status"] == "NOT_PROVIDED" for item in body["sections"])
 
 
 def test_N11_llm_timeout_has_safe_error_and_no_draft(api: Api) -> None:
@@ -293,7 +293,7 @@ def test_N11_llm_timeout_has_safe_error_and_no_draft(api: Api) -> None:
 
 _NOT_PROVIDED_RESULT: dict[str, Any] = {
     "sections": [
-        {"name": "Chief Complaint", "status": "NOT_PROVIDED", "content": None, "citations": []},
+        {"name": "Subjective", "status": "NOT_PROVIDED", "content": None, "citations": []},
     ]
 }
 
@@ -386,8 +386,7 @@ def test_N14_adding_a_template_file_needs_no_engine_change(tmp_path: Path) -> No
         source.read_text(encoding="utf-8"), encoding="utf-8"
     )
     (tmp_path / "custom_note.yaml").write_text(
-        "id: custom_note\ntitle: Custom Note\nsections:\n"
-        "  - name: Summary\n    status: NOT_PROVIDED\n    citation_required: true\n",
+        "id: custom_note\ntitle: Custom Note\nsections:\n  - name: Summary\n    level: STANDARD\n",
         encoding="utf-8",
     )
     templates = load_templates(tmp_path)
@@ -397,7 +396,7 @@ def test_N14_adding_a_template_file_needs_no_engine_change(tmp_path: Path) -> No
 
 def test_N14_invalid_template_file_stops_startup(tmp_path: Path) -> None:
     (tmp_path / "broken.yaml").write_text(
-        "id: broken\ntitle: Broken\nsections:\n  - name: X\n    status: MAYBE\n",
+        "id: broken\ntitle: Broken\nsections:\n  - name: X\n    level: MAYBE\n",
         encoding="utf-8",
     )
     with pytest.raises(ValidationError):

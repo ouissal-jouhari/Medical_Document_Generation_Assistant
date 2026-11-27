@@ -1,15 +1,21 @@
 id: clinical_note
 title: Clinical Note
 sections:
-  - name: Chief Complaint
-    status: NOT_PROVIDED
-    citation_required: true
-  - name: History of Present Illness
-    status: NOT_PROVIDED
-    citation_required: true
+  - name: Subjective
+    level: STANDARD
+    description: Symptoms, complaints and history reported by the patient.
+  - name: Objective
+    level: STANDARD
+    description: Examination findings, measurements and investigation results.
   - name: Assessment
-    status: NOT_PROVIDED
-    citation_required: true
+    level: STANDARD
+    description: The clinician's assessment or diagnoses stated in the text.
   - name: Plan
-    status: NOT_PROVIDED
-    citation_required: true
+    level: STANDARD
+    description: Treatment plan, actions and advice given.
+  - name: Medications
+    level: SAFETY
+    description: Medications and doses explicitly stated in the text.
+  - name: Allergies and adverse reactions
+    level: SAFETY
+    description: Allergies or adverse reactions explicitly stated in the text.
