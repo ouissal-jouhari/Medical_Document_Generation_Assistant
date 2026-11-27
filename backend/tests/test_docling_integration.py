@@ -41,7 +41,7 @@ def test_F04_degraded_scan_goes_through_docling_and_yields_fields(
     found = REQUIRED_FIELD_COUNT - len(missing_required(data))
     # Un scan dégradé peut perdre des champs : le clinicien corrige (F-05, R-02). On exige que
     # l'extraction ne soit pas un échec total et qu'une majorité de champs soit trouvée.
-    assert found >= 4, f"seulement {found}/{REQUIRED_FIELD_COUNT} champs : {missing_required(data)}"
+    assert found >= 8, f"seulement {found}/{REQUIRED_FIELD_COUNT} champs : {missing_required(data)}"
 
 
 def test_F04_pdf_without_text_layer_is_read_by_docling(provider: HybridOcrProvider) -> None:

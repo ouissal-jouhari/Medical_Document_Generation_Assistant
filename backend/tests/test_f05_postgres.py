@@ -1,4 +1,4 @@
-"""F-05 sur PostgreSQL : modèles et migration 0003 concordent ; corrections en ajout seul."""
+"""F-05 sur PostgreSQL : modèles et migration 0003 concordent ; corrections sans UPDATE."""
 
 from datetime import UTC, datetime
 from pathlib import Path
@@ -78,20 +78,21 @@ def test_F05_corrections_are_append_only_for_the_application_role(
             )
         )
         session.commit()
-    for statement in (
-        sa.update(ConsultationCorrection).values(new_value="x"),
-        sa.delete(ConsultationCorrection),
-    ):
-        with Session(engine) as session, pytest.raises(ProgrammingError) as error:
-            session.execute(statement)
-        assert "permission denied" in str(error.value)
+    with Session(engine) as session, pytest.raises(ProgrammingError) as error:
+        session.execute(sa.update(ConsultationCorrection).values(new_value="x"))
+    assert "permission denied" in str(error.value)
     engine.dispose()
 
 
-def test_F25_consultation_rows_cannot_be_deleted_before_milestone_6(
+def test_F22_application_role_can_delete_consultation_data_but_not_audit_rows(
     migrated: dict[str, str],
 ) -> None:
     engine = sa.create_engine(migrated["app"])
-    with Session(engine) as session, pytest.raises(ProgrammingError):
+    with Session(engine) as session:
+        session.execute(sa.delete(ConsultationCorrection))
         session.execute(sa.delete(Consultation))
+        session.commit()
+    with Session(engine) as session, pytest.raises(ProgrammingError) as error:
+        session.execute(sa.text("DELETE FROM audit_event"))
+    assert "permission denied" in str(error.value)
     engine.dispose()

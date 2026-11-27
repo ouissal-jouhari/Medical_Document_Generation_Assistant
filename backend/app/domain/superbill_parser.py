@@ -27,7 +27,7 @@ _LABELS: list[tuple[str, str, bool]] = [
     ("ignored", r"(?:physician\s+)?signature", False),
     ("ignored", r"physician\s+npi", True),
     ("ignored", r"(?:primary|secondary)\s+insurance", True),
-    ("ignored", r"insurance\s+(?:provider|company|carrier|name|id)", True),
+    ("ignored", r"insurance\s+(?:provider|company|carrier|name|id)\.?", True),
     ("ignored", r"insurance", False),
     ("ignored", r"payer", False),
     ("ignored", r"superbill\s+(?:no\.?|number|#)", True),
@@ -201,12 +201,21 @@ def _split_code(row: str) -> tuple[str, str] | None:
     return tokens[0].strip(",;"), " ".join(tokens[1:]).strip(" -–:")
 
 
+def _fix_ocr_icd(code: str) -> str:
+    """Un code ICD-10-CM commence toujours par une lettre : « 110 » lu pour « I10 » (OCR)."""
+    if re.fullmatch(r"[01]\d{2}(?:\.\w{1,4})?", code):
+        return ("I" if code[0] == "1" else "O") + code[1:]
+    return code
+
+
 def _parse_diagnoses(section: list[str]) -> tuple[Diagnosis, ...]:
     rows = []
     for row in section[1:]:
         split = _split_code(row)
-        if split and ICD10CM.match(split[0].upper()):
-            rows.append(Diagnosis(split[0].upper(), split[1]))
+        if split:
+            code = _fix_ocr_icd(split[0].upper())
+            if ICD10CM.match(code):
+                rows.append(Diagnosis(code, split[1]))
     return tuple(rows)
 
 
