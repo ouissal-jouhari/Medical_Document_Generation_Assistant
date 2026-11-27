@@ -141,6 +141,7 @@ def get_llm_provider() -> LlmProvider:
         settings.gemini_api_key.get_secret_value(),
         settings.llm_model,
         settings.llm_timeout_seconds,
+        tuple(m.strip() for m in settings.llm_fallback_models.split(",") if m.strip()),
     )
 
 

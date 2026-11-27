@@ -28,11 +28,12 @@ class Settings(BaseSettings):
     docling_artifacts_path: str | None = None
     extraction_timeout_seconds: float = 300.0
     llm_provider: str = "gemini"
-    llm_model: str = "gemini-2.5-flash"
+    llm_model: str = "gemini-3.8-flash"
+    llm_fallback_models: str = "gemini-3.6-flash,gemini-3.5-flash,gemini-3.1-flash-lite"
     gemini_api_key: SecretStr = SecretStr("")
     ollama_base_url: str = "http://ollama:11434"
     ollama_model: str = "gpt-oss-20b"
-    llm_timeout_seconds: float = 20.0
+    llm_timeout_seconds: float = 60.0
     template_dir: str = "app/templates"
 
 
