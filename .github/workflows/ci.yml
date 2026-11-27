@@ -36,6 +36,8 @@ jobs:
       - name: mypy
         working-directory: backend
         run: uv run mypy
+      - name: Pango (rendu PDF WeasyPrint, F-18)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 fonts-dejavu-core
       - name: pytest
         working-directory: backend
         run: uv run pytest -q
