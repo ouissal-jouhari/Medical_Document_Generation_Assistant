@@ -125,6 +125,22 @@ class DocumentVersionEvent(Base):
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class Export(Base):
+    """Export d'un document approuvé (SRS 9.1, F-18) : format, version, acteur et date.
+
+    Ajout seul ; DELETE uniquement pour la suppression et la conservation (F-22, N-10).
+    """
+
+    __tablename__ = "export"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    document_id: Mapped[UUID] = mapped_column(ForeignKey("document.id"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    format: Mapped[str] = mapped_column(String(8))
+    actor_id: Mapped[UUID] = mapped_column(Uuid)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class ConsultationCorrection(Base):
     """Correction d'un champ : auteur et date (F-05). Ajout seul : ni UPDATE ni DELETE."""
 

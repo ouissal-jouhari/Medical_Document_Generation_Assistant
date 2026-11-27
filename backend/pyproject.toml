@@ -66,7 +66,7 @@ plugins = ["pydantic.mypy"]
 files = ["app", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["docling.*"]
+module = ["docling.*", "weasyprint.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

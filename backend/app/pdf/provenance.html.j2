@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Provenance report</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 15mm 18mm 15mm;
+    @bottom-left { content: "Provenance report – not part of the clinical document"; font-size: 8pt; color: #444; }
+    @bottom-right { content: counter(page) " / " counter(pages); font-size: 8pt; color: #444; }
+  }
+  body { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 9pt; color: #111; }
+  h1 { font-size: 14pt; margin: 0 0 2mm 0; }
+  .meta { margin: 0 0 4mm 0; color: #333; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #999; padding: 1.5mm; text-align: left; vertical-align: top; }
+  th { background: #eee; }
+  ul { margin: 0; padding-left: 4mm; }
+</style>
+</head>
+<body>
+<h1>Provenance report – {{ report.title }}</h1>
+<p class="meta">{{ report.state }} · Version {{ report.version }} · Generated on {{ report.generated_at }}</p>
+<table>
+  <tr><th>Section</th><th>Status</th><th>Origin</th><th>Sources</th></tr>
+  {% for entry in report.entries %}
+  <tr>
+    <td>{{ entry.section }}</td>
+    <td>{{ entry.status }}</td>
+    <td>{{ entry.origin }}</td>
+    <td>{% if entry.sources %}<ul>{% for source in entry.sources %}<li>{{ source }}</li>{% endfor %}</ul>{% else %}None{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+</body>
+</html>

@@ -3,10 +3,10 @@ voient que les documents de l'auteur (F-25, H-03)."""
 
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 
 from app.adapters.models import DocumentVersionEvent
-from app.api.deps import ClinicianUser, ReviewServiceDep
+from app.api.deps import ClinicianUser, ExportServiceDep, ReviewServiceDep
 from app.api.schemas import (
     DocumentOut,
     ExpectedVersionIn,
@@ -17,6 +17,7 @@ from app.api.schemas import (
     VersionOut,
 )
 from app.domain.document import DocumentState
+from app.domain.values import ExportedFile
 from app.services.review import DocumentView, VersionView
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -136,3 +137,27 @@ def create_new_document(
 ) -> DocumentOut:
     document = review.create_new_document(user.id, document_id)
     return document_out(review.view_of(document))
+
+
+def _download(exported: ExportedFile) -> Response:
+    """Fichier téléchargé sur l'appareil local (F-18, I-06), jamais mis en cache."""
+    return Response(
+        content=exported.content,
+        media_type=exported.media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{exported.filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@router.post("/{document_id}/export")
+def export_pdf(document_id: UUID, user: ClinicianUser, exports: ExportServiceDep) -> Response:
+    return _download(exports.export_pdf(user.id, document_id))
+
+
+@router.post("/{document_id}/provenance-report")
+def provenance_report(
+    document_id: UUID, user: ClinicianUser, exports: ExportServiceDep
+) -> Response:
+    return _download(exports.provenance_report(user.id, document_id))

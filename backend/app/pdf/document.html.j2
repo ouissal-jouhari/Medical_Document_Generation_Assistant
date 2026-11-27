@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ doc.title }}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 32mm 18mm 26mm 18mm;
+    @top-center { content: element(header); }
+    @bottom-center { content: element(footer); }
+    @bottom-right { content: counter(page) " / " counter(pages); font-size: 8pt; color: #444; }
+  }
+  body { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 10pt; color: #111; }
+  .header { position: running(header); text-align: center; font-size: 9pt;
+            border-bottom: 1px solid #888; padding-bottom: 2mm; width: 100%; }
+  .header .name { font-size: 12pt; font-weight: bold; }
+  .footer { position: running(footer); text-align: center; font-size: 8pt; color: #444;
+            border-top: 1px solid #888; padding-top: 2mm; width: 100%; }
+  h1 { font-size: 15pt; text-transform: uppercase; margin: 0 0 4mm 0; }
+  h2 { font-size: 11pt; margin: 5mm 0 1mm 0; border-bottom: 1px solid #ccc; }
+  table.block { border-collapse: collapse; width: 100%; }
+  table.block th { text-align: left; width: 28%; padding: 1mm 2mm 1mm 0; font-weight: bold; }
+  table.block td { padding: 1mm 0; }
+  .text { white-space: pre-wrap; margin: 0; }
+  .empty { color: #555; font-style: italic; margin: 0; }
+  ul { margin: 0; padding-left: 5mm; }
+  .approval { margin-top: 8mm; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="name">{{ doc.clinic.name }}</div>
+  <div>{{ doc.clinic.address }}, {{ doc.clinic.city }} {{ doc.clinic.postal_code }}</div>
+  <div>{{ doc.clinic.phone }} · {{ doc.clinic.email }} · {{ doc.clinic.website }}</div>
+</div>
+<div class="footer">
+  {{ doc.clinic.name }} · {{ doc.clinic.address }}, {{ doc.clinic.city }} {{ doc.clinic.postal_code }}<br>
+  {{ doc.clinic.phone }} · {{ doc.clinic.email }} · {{ doc.clinic.website }}
+</div>
+
+<h1>{{ doc.title }}</h1>
+{% set block = doc.common_block %}
+<table class="block">
+  <tr><th>Patient name</th><td>{{ block.patient_name or "" }}</td></tr>
+  <tr><th>Date of birth</th><td>{{ block.date_of_birth or "" }}</td></tr>
+  <tr><th>Patient ID</th><td>{{ block.patient_id or "" }}</td></tr>
+  <tr><th>Physician</th><td>{{ block.physician or "" }}</td></tr>
+  <tr><th>Date of service</th><td>{{ block.date_of_service or "" }}</td></tr>
+</table>
+
+<h2>Diagnoses (ICD-10-CM)</h2>
+<ul>{% for item in block.diagnoses or [] %}<li>{{ item.code }} – {{ item.description }}</li>{% endfor %}</ul>
+
+<h2>Procedures (CPT)</h2>
+<ul>{% for item in block.procedures or [] %}<li>{{ item.code }} – {{ item.description }}</li>{% endfor %}</ul>
+
+{% for name, content in doc.sections %}
+<h2>{{ name }}</h2>
+{% if content %}<p class="text">{{ content }}</p>{% else %}<p class="empty">Not provided</p>{% endif %}
+{% endfor %}
+
+<p class="approval">Approved by {{ doc.approver_name }} on {{ doc.approved_at }}</p>
+</body>
+</html>
