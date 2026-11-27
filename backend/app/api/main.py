@@ -4,6 +4,7 @@ from collections.abc import Awaitable, Callable
 import structlog
 from fastapi import FastAPI, Request, Response
 
+from app.adapters.templates import load_templates
 from app.api.routes.consultations import router as consultations_router
 from app.api.routes.health import router as health_router
 from app.api.routes.me import router as me_router
@@ -17,6 +18,8 @@ log = structlog.get_logger()
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_dir, settings.log_retention_days)
+    # Templates validés au démarrage (SRS 5.x) : un fichier invalide empêche le démarrage (N-14).
+    load_templates(settings.template_dir)
     app = FastAPI(
         title="XeleronIA", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None
     )

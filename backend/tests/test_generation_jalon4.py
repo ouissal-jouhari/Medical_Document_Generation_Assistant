@@ -1,5 +1,7 @@
 """Tests automatiques des exigences du jalon 4."""
 
+import json
+import threading
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -8,7 +10,9 @@ import pytest
 from pydantic import ValidationError
 
 from app.adapters.templates import load_templates
+from app.api import main
 from app.api.deps import get_llm_provider
+from app.core.config import Settings
 from app.ports.llm import LlmProvider
 from tests.conftest import CANARY, Api
 from tests.superbill_samples import CLEAN_TEXT, pdf_with_text
@@ -158,6 +162,133 @@ def test_F12_malformed_output_never_becomes_a_draft(api: Api) -> None:
         api.client.get(f"/consultations/{consultation_id}/documents", headers=api.headers()).json()
         == []
     )
+
+
+@pytest.mark.parametrize(
+    "drifted",
+    [
+        {
+            "sections": [
+                {"name": "Subjective", "status": "provided", "content": None, "citations": []}
+            ]
+        },
+        {"sections": [{"name": "Subjective", "status": "NOT_PROVIDED", "content": None}]},
+        {
+            "sections": [
+                {
+                    "name": "Subjective",
+                    "status": "NOT_PROVIDED",
+                    "content": None,
+                    "citations": [],
+                    "confidence": 0.9,
+                }
+            ]
+        },
+    ],
+)
+def test_F12_schema_drift_is_malformed_not_silently_not_provided(
+    api: Api, drifted: dict[str, Any]
+) -> None:
+    """Une sortie hors schéma n'est pas transformée en « Not provided » : erreur, aucun document."""
+    llm = _with_llm(api)
+    llm.result = drifted
+    consultation_id = _validated(api)
+    response = api.client.post(
+        f"/consultations/{consultation_id}/documents",
+        json={"documentType": "clinical_note"},
+        headers=api.headers(),
+    )
+    assert response.status_code == 502
+    assert response.json() == {"detail": "malformed_generation"}
+
+
+def test_F09_double_trigger_is_refused_while_generating(api: Api) -> None:
+    """Un second déclenchement pendant une génération reçoit 409 ; le premier aboutit (201)."""
+    llm = _with_llm(api)
+    consultation_id = _validated(api)
+    entered, release = threading.Event(), threading.Event()
+    original = llm.generate_structured
+
+    def blocking_generate(prompt: str, schema: dict[str, Any]) -> dict[str, Any]:
+        entered.set()
+        assert release.wait(10)
+        return original(prompt, schema)
+
+    llm.generate_structured = blocking_generate  # type: ignore[method-assign]
+    statuses: list[int] = []
+    body = {"documentType": "clinical_note"}
+    worker = threading.Thread(
+        target=lambda: statuses.append(
+            api.client.post(
+                f"/consultations/{consultation_id}/documents", json=body, headers=api.headers()
+            ).status_code
+        )
+    )
+    worker.start()
+    try:
+        assert entered.wait(10)
+        second = api.client.post(
+            f"/consultations/{consultation_id}/documents", json=body, headers=api.headers()
+        )
+        assert second.status_code == 409
+    finally:
+        release.set()
+        worker.join(10)
+    assert statuses == [201]
+
+
+def test_F07_text_stays_editable_after_generation_and_each_document_keeps_its_snapshot(
+    api: Api,
+) -> None:
+    llm = _with_llm(api)
+    llm.result = {"sections": []}
+    consultation_id = _validated(api)
+    body = {"documentType": "clinical_note"}
+    api.client.put(
+        f"/consultations/{consultation_id}/text",
+        json={"text": "First text."},
+        headers=api.headers(),
+    )
+    first = api.client.post(
+        f"/consultations/{consultation_id}/documents", json=body, headers=api.headers()
+    )
+    api.client.put(
+        f"/consultations/{consultation_id}/text",
+        json={"text": "Edited text."},
+        headers=api.headers(),
+    )
+    second = api.client.post(
+        f"/consultations/{consultation_id}/documents", json=body, headers=api.headers()
+    )
+    assert first.json()["text_snapshot"] == "First text."
+    assert second.json()["text_snapshot"] == "Edited text."
+    documents = api.client.get(
+        f"/consultations/{consultation_id}/documents", headers=api.headers()
+    ).json()
+    snapshots = {d["version"]: d["text_snapshot"] for d in documents}
+    assert snapshots == {1: "First text.", 2: "Edited text."}
+
+
+def test_N02_each_generation_logs_llm_validation_and_total_durations(
+    api: Api, log_dir: Path
+) -> None:
+    _with_llm(api).result = {"sections": []}
+    consultation_id = _validated(api)
+    response = api.client.post(
+        f"/consultations/{consultation_id}/documents",
+        json={"documentType": "clinical_note"},
+        headers=api.headers(),
+    )
+    assert response.status_code == 201
+    lines = [
+        line
+        for path in log_dir.glob("xeleron.log*")
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if "generation_timed" in line
+    ]
+    event = json.loads(lines[-1])
+    assert {"llm_ms", "validation_ms", "total_ms"} <= event.keys()
+    assert event["total_ms"] >= event["llm_ms"]
 
 
 def test_N07_prompt_injection_is_untrusted_data(api: Api) -> None:
@@ -401,3 +532,16 @@ def test_N14_invalid_template_file_stops_startup(tmp_path: Path) -> None:
     )
     with pytest.raises(ValidationError):
         load_templates(tmp_path)
+
+
+def test_N14_application_refuses_to_start_with_an_invalid_template(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "broken.yaml").write_text(
+        "id: broken\ntitle: Broken\nsections:\n  - name: X\n    level: MAYBE\n",
+        encoding="utf-8",
+    )
+    settings = Settings(template_dir=str(tmp_path), log_dir=str(tmp_path / "logs"))
+    monkeypatch.setattr(main, "get_settings", lambda: settings)
+    with pytest.raises(ValidationError):
+        main.create_app()

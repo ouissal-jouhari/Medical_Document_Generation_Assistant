@@ -1,11 +1,9 @@
 """Templates (SRS 5.1 à 5.4) et contrôle d'ancrage : sections attendues, sources, anti-invention."""
 
-from typing import Any
-
 import pytest
 
 from app.adapters.templates import load_templates
-from app.services.generation import _check_section
+from app.services.generation import _check_section, _SectionOutput
 from tests.conftest import Api
 from tests.test_generation_jalon4 import _validated, _with_llm
 
@@ -218,8 +216,8 @@ def test_S02_medication_and_allergy_never_invented_without_a_source(api: Api) ->
         assert by_name[name]["sources"] == []
 
 
-def _entry(content: str, *citations: str) -> dict[str, Any]:
-    return {"name": "X", "status": "PROVIDED", "content": content, "citations": list(citations)}
+def _entry(content: str, *citations: str) -> _SectionOutput:
+    return _SectionOutput(name="X", status="PROVIDED", content=content, citations=list(citations))
 
 
 def test_F10_lowercase_unit_is_not_mistaken_for_an_icd_code() -> None:

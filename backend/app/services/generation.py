@@ -1,12 +1,14 @@
 """Génération structurée de documents derrière LlmProvider."""
 
 import re
+import time
 from dataclasses import dataclass
 from threading import Lock
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 import structlog
+from pydantic import BaseModel, ConfigDict, ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -34,6 +36,21 @@ class GeneratedSection:
     content: str | None
     sources: list[dict[str, Any]]
     level: str = "STANDARD"
+
+
+class _SectionOutput(BaseModel):
+    """Une section renvoyée par le LLM (F-10). Toute dérive du schéma = sortie malformée."""
+
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    status: Literal["PROVIDED", "NOT_PROVIDED"]
+    content: str | None
+    citations: list[str]
+
+
+class _GenerationOutput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    sections: list[_SectionOutput]
 
 
 class GenerationService:
@@ -100,6 +117,7 @@ class GenerationService:
                 self._in_progress.discard(key)
 
     def _generate(self, author_id: UUID, consultation_id: UUID, document_type: str) -> Document:
+        started = time.monotonic()
         consultation = self._repo.get(consultation_id, author_id)
         if consultation is None:
             raise NotFound
@@ -113,37 +131,7 @@ class GenerationService:
         data = consultation.data or {}
         prompt = self._prompt(template, text, data)
         schema = self._schema(template)
-        try:
-            raw = self._llm.generate_structured(prompt, schema)
-        except TimeoutError as error:
-            raise LlmTimeout from error
-        except RuntimeError as error:
-            raise LlmUnavailable from error
-        except (ValueError, KeyError, TypeError):
-            try:
-                raw = self._llm.generate_structured(prompt, schema)
-            except TimeoutError as retry_error:
-                raise LlmTimeout from retry_error
-            except RuntimeError as retry_error:
-                raise LlmUnavailable from retry_error
-            except (ValueError, KeyError, TypeError) as retry_error:
-                raise MalformedGeneration from retry_error
-
-        try:
-            sections = self._validate_sections(template, raw, text, data)
-        except MalformedGeneration:
-            try:
-                raw = self._llm.generate_structured(prompt, schema)
-                sections = self._validate_sections(template, raw, text, data)
-            except (
-                TimeoutError,
-                RuntimeError,
-                ValueError,
-                KeyError,
-                TypeError,
-                MalformedGeneration,
-            ) as retry_error:
-                raise MalformedGeneration from retry_error
+        sections, llm_seconds, check_seconds = self._ask(template, prompt, schema, text, data)
         version = len(self.list_documents(author_id, consultation.id)) + 1
         now = self._clock.now()
         document = Document(
@@ -171,7 +159,66 @@ class GenerationService:
                 version=document.version,
             )
         )
+        # N-02 : durées par génération (extraction Superbill mesurée au dépôt, jalon 3).
+        log.info(
+            "generation_timed",
+            document_type=document_type,
+            llm_ms=round(llm_seconds * 1000),
+            validation_ms=round(check_seconds * 1000),
+            total_ms=round((time.monotonic() - started) * 1000),
+        )
         return document
+
+    def _ask(
+        self,
+        template: DocumentTemplate,
+        prompt: str,
+        schema: dict[str, Any],
+        text: str,
+        data: dict[str, Any],
+    ) -> tuple[list[GeneratedSection], float, float]:
+        """Appel LLM puis contrôle de sortie. Sortie hors schéma ou mal ancrée : une nouvelle
+        tentative (F-12), puis échec. Retourne aussi les durées LLM et de contrôle."""
+        raw, llm_seconds = self._call_llm(prompt, schema)
+        try:
+            sections, check_seconds = self._check(template, raw, text, data)
+        except MalformedGeneration:
+            raw, retry_seconds = self._call_llm(prompt, schema)
+            sections, check_seconds = self._check(template, raw, text, data)
+            llm_seconds += retry_seconds
+        return sections, llm_seconds, check_seconds
+
+    def _call_llm(self, prompt: str, schema: dict[str, Any]) -> tuple[dict[str, Any], float]:
+        """Appel chronométré. Sortie illisible : une nouvelle tentative, puis MalformedGeneration.
+        Délai et indisponibilité ne sont jamais réessayés ici (N-11)."""
+        started = time.monotonic()
+        try:
+            raw = self._llm.generate_structured(prompt, schema)
+        except TimeoutError as error:
+            raise LlmTimeout from error
+        except RuntimeError as error:
+            raise LlmUnavailable from error
+        except (ValueError, KeyError, TypeError):
+            try:
+                raw = self._llm.generate_structured(prompt, schema)
+            except TimeoutError as retry_error:
+                raise LlmTimeout from retry_error
+            except RuntimeError as retry_error:
+                raise LlmUnavailable from retry_error
+            except (ValueError, KeyError, TypeError) as retry_error:
+                raise MalformedGeneration from retry_error
+        return raw, time.monotonic() - started
+
+    def _check(
+        self,
+        template: DocumentTemplate,
+        raw: dict[str, Any],
+        text: str,
+        data: dict[str, Any],
+    ) -> tuple[list[GeneratedSection], float]:
+        started = time.monotonic()
+        sections = self._validate_sections(template, raw, text, data)
+        return sections, time.monotonic() - started
 
     def _common_block(self, data: dict[str, Any]) -> dict[str, Any]:
         """Bloc commun (SRS 5.1), déterministe, issu de la Superbill : aucune déduction (S-03).
@@ -260,14 +307,11 @@ class GenerationService:
         text: str,
         data: dict[str, Any],
     ) -> list[GeneratedSection]:
-        entries = raw.get("sections")
-        if not isinstance(entries, list):
-            raise MalformedGeneration
-        by_name = {
-            entry.get("name"): entry
-            for entry in entries
-            if isinstance(entry, dict) and isinstance(entry.get("name"), str)
-        }
+        try:
+            output = _GenerationOutput.model_validate(raw)
+        except ValidationError as error:
+            raise MalformedGeneration from error
+        by_name = {entry.name: entry for entry in output.sections}
         block = self._common_block(data)
         coded = block["diagnoses"] + block["procedures"]
         # Codes autorisés : ceux de la Superbill, et ceux écrits dans le texte du clinicien.
@@ -278,12 +322,10 @@ class GenerationService:
         results: list[GeneratedSection] = []
         for section in template.sections:
             entry = by_name.get(section.name)
-            if entry is not None and entry.get("status") not in {"PROVIDED", "NOT_PROVIDED"}:
-                raise MalformedGeneration
             sources, reason = _check_section(entry, text, sources_text, allowed_codes)
             content: str | None = None
             if reason is None and entry is not None:
-                content = entry["content"]
+                content = entry.content
             status = "PROVIDED" if content is not None else "NOT_PROVIDED"
             log.info(
                 "section_checked",
@@ -308,7 +350,7 @@ _NEGATION = re.compile(r"\b(?:no|not|none|denies|denied|without|negative|absent|
 
 
 def _check_section(
-    entry: dict[str, Any] | None,
+    entry: _SectionOutput | None,
     text: str,
     sources_text: str,
     allowed_codes: set[str],
@@ -318,18 +360,16 @@ def _check_section(
     unsupported_negation, code_not_in_sources. Aucun texte n'est journalisé."""
     if entry is None:
         return [], "not_returned"
-    if entry.get("status") == "NOT_PROVIDED":
+    if entry.status == "NOT_PROVIDED":
         return [], "llm_not_provided"
-    content = entry.get("content")
-    if not isinstance(content, str) or not content.strip():
+    content = entry.content
+    if content is None or not content.strip():
         return [], "empty_content"
-    citations = entry.get("citations")
-    if not isinstance(citations, list) or not citations:
+    citations = [citation for citation in entry.citations if citation.strip()]
+    if not citations:
         return [], "no_citation"
     sources: list[dict[str, Any]] = []
     for citation in citations:
-        if not isinstance(citation, str) or not citation.strip():
-            continue
         start = sources_text.find(citation)
         if start >= 0:
             kind = "consultation_text" if start < len(text) else "superbill"
