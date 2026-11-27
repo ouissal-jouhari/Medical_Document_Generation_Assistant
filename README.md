@@ -14,6 +14,7 @@ Monolithe modulaire conteneurisé (ADR 0001) :
 - `frontend/` – React, Vite, TypeScript ; image servie par Caddy.
 - `deploy/Caddyfile` – TLS, limite de taille des requêtes, en-têtes de sécurité, proxy `/api` vers le backend.
 - `docker-compose.yml` – `db` (PostgreSQL), `keycloak` (OIDC + MFA, realm dans `deploy/keycloak/`), `backend`, `web` (Caddy + frontend), `ollama` (profil `local` seulement).
+- Documents : versions immuables, revue (relu, rejet, régénération, rollback) et approbation figée avec instantané des coordonnées de la clinique (`CLINIC_*`, ADR 0017, 0018).
 - Identité : connexion OIDC (PKCE) avec TOTP obligatoire ; l'API vérifie la signature du jeton et le niveau `acr` (ADR 0004, 0005). Audit en ajout seul garanti par les droits PostgreSQL (ADR 0006).
 
 ## Installation (développement)
