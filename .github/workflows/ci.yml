@@ -77,7 +77,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0 tesseract-ocr tesseract-ocr-eng
       - name: Tests Docling
         working-directory: backend
         env:
