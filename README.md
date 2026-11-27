@@ -10,11 +10,12 @@ Monolithe modulaire conteneurisé (ADR 0001) :
   - `app/ports` : `OcrProvider`, `LlmProvider`, `IdentityProvider`, `TranscriptIngestion`, `DocumentExporter`.
   - `app/adapters` : implémentations (base de données, fournisseurs).
   - `app/api` : routes HTTP (l'API est le contrat unique) ; `app/core` : configuration, logs, erreurs.
-  - `app/templates` : templates de documents en YAML.
+  - `app/templates` : templates de documents en YAML ; `app/pdf` : modèles HTML (Jinja2) du PDF clinique et du rapport de provenance.
 - `frontend/` – React, Vite, TypeScript ; image servie par Caddy.
 - `deploy/Caddyfile` – TLS, limite de taille des requêtes, en-têtes de sécurité, proxy `/api` vers le backend.
 - `docker-compose.yml` – `db` (PostgreSQL), `keycloak` (OIDC + MFA, realm dans `deploy/keycloak/`), `backend`, `web` (Caddy + frontend), `ollama` (profil `local` seulement).
 - Documents : versions immuables, revue (relu, rejet, régénération, rollback) et approbation figée avec instantané des coordonnées de la clinique (`CLINIC_*`, ADR 0017, 0018).
+- Export : PDF du document approuvé (WeasyPrint, en-tête et pied de page de la clinique sur chaque page, aucune requête externe), rapport de provenance séparé, chaque export tracé (ADR 0019, 0020). Conservation : purge planifiée à 90 jours (consultations) et 1 an (audit, rôle `xeleron_purge`), `RETENTION_*` et `PURGE_DATABASE_URL` (ADR 0021).
 - Identité : connexion OIDC (PKCE) avec TOTP obligatoire ; l'API vérifie la signature du jeton et le niveau `acr` (ADR 0004, 0005). Audit en ajout seul garanti par les droits PostgreSQL (ADR 0006).
 
 ## Installation (développement)
@@ -39,6 +40,7 @@ cd frontend && npm run lint && npm run build
 ```
 Superbills : PDF de 3 pages au maximum ou une image png/jpg/jpeg, 50 Mo au maximum (ADR 0009). L'extraction lit la couche texte du PDF, puis Docling sur CPU pour les scans (ADR 0007) ; Docling est un extra : `uv sync --extra ocr`, puis `RUN_DOCLING_TESTS=1 uv run pytest tests/test_docling_integration.py -s`. Les jeux de test synthétiques se régénèrent avec `uv run python ../scripts/make_superbill_fixtures.py`.
 Les tests de droits de base (F-21) ont besoin de PostgreSQL : définir `TEST_DATABASE_URL` (ex. `postgresql+psycopg://postgres:motdepasse@localhost:5432/postgres`, un compte pouvant créer des bases). Sans cette variable ils sont ignorés en local et échouent en CI.
+Les tests de rendu PDF réel ont besoin de WeasyPrint et de Pango (`libpango-1.0-0`, `libpangoft2-1.0-0`) : ignorés s'ils manquent en local, obligatoires en CI.
 Utilisateur de test Keycloak : `clinicien-test`, mot de passe `KC_TEST_USER_PASSWORD`. Le secret TOTP brut est `KC_TEST_USER_TOTP_SECRET` ; à saisir dans une application TOTP en base32 (`python -c "import base64;print(base64.b32encode(b'<secret>').decode())"`).
 Les tests portent l'ID de l'exigence couverte (ex. `test_N08_...`). Le test canari (`tests/test_n08_canary.py`) vérifie qu'aucune donnée patient n'apparaît dans les logs ni dans les erreurs.
 
