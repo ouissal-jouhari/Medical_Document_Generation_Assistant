@@ -282,7 +282,7 @@ R-01, R-03, R-04
 - [x] N-11 : message sûr, sans trace technique (`test_N11_llm_timeout_has_safe_error_and_no_draft`, `test_N11_total_budget_bounds_the_whole_generation`, `test_F12_unavailable_when_all_models_fail`)
 - [x] Durées mesurées pour Gemini (N-02 : `generation_timed`, rapport `docs/mesures/jalon-4-gemini.md`). Écart : objectif 20 s (N-01) non tenu, non bloquant.
 - [ ] Durées gpt-oss-20b mesurées en local : **non fait** (Ollama installé, démon arrêté, modèle non vérifié)
-- [ ] Pipeline CI vert ; F-25 rejoué sur les routes de génération (`test_F25_generation_routes_hide_documents_of_another_clinician`) : à cocher après CI verte sur la PR
+- [x] Pipeline CI vert (PR #2, run 46006171129 : quality, security, ocr, smoke) ; F-25 rejoué sur les routes de génération (`test_F25_generation_routes_hide_documents_of_another_clinician`)
 - [ ] Utilisateur : « jalon validé »
 
 ---
