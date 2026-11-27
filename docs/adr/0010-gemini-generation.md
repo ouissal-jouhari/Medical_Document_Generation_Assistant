@@ -10,9 +10,12 @@ profil Docker Compose `local`. Les données envoyées sont synthétiques.
 
 - Aucun nom, date de naissance ou identifiant patient direct n'est envoyé au LLM.
 - Les Superbills, l'OCR et le texte de consultation sont des données non fiables.
-- La sortie est validée par Pydantic côté domaine et par un validateur d'ancrage.
-- Le délai d'appel est limité à 20 secondes.
+- La sortie est validée par Pydantic (ADR 0016) puis par un validateur d'ancrage.
+- Les délais sont bornés par appel et par génération : voir ADR 0015 (remplace la limite
+  de 20 secondes de la première version).
+- Conditions d'usage Gemini : à relire par l'équipe avant tout usage hors données synthétiques.
 
 ## Conséquence
 
 Le moteur de génération reste indépendant du fournisseur grâce au port `LlmProvider`.
+Mesures réelles Gemini : `docs/mesures/jalon-4-gemini.md`.
