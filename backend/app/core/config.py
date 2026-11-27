@@ -33,7 +33,9 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr = SecretStr("")
     ollama_base_url: str = "http://ollama:11434"
     ollama_model: str = "gpt-oss-20b"
-    llm_timeout_seconds: float = 60.0
+    # Délai par appel LLM, et délai total d'une génération (tous modèles et tentatives confondus).
+    llm_timeout_seconds: float = 90.0
+    llm_total_timeout_seconds: float = 150.0
     template_dir: str = "app/templates"
 
 

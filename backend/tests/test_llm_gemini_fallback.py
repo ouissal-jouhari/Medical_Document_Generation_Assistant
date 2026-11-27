@@ -102,3 +102,48 @@ def test_F12_timeout_falls_back_to_next_model_without_second_wait(
     provider, called = _provider(monkeypatch, [TimeoutError(), _ok({"a": "b"})])
     assert provider.generate_structured("p", {}) == {"a": "b"}
     assert called == ["main", "backup"]
+
+
+def test_N11_total_budget_bounds_the_whole_generation(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Délai maximal : chaque appel reçoit au plus le temps restant ; plus de budget = arrêt."""
+    now = [0.0]
+    timeouts: list[float] = []
+
+    def slow_urlopen(request: Any, timeout: float) -> _Response:
+        timeouts.append(timeout)
+        now[0] += timeout
+        raise TimeoutError()
+
+    monkeypatch.setattr(llm, "urlopen", slow_urlopen)
+    provider = GeminiLlmProvider(
+        "k",
+        "main",
+        5.0,
+        ("backup", "third"),
+        2,
+        sleep=lambda _s: None,
+        total_timeout_seconds=8.0,
+        clock=lambda: now[0],
+    )
+    with pytest.raises(TimeoutError, match="llm_timeout"):
+        provider.generate_structured("p", {})
+    assert timeouts == [5.0, 3.0]
+
+
+def test_N19_gemini_error_message_is_never_logged(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Le message d'erreur Gemini peut reprendre la requête : seul le statut est journalisé."""
+    canary = "CANARY-PATIENT-NAME"
+    body = json.dumps({"error": {"status": "INVALID_ARGUMENT", "message": canary}}).encode()
+    error = HTTPError("https://x", 400, "err", {}, io.BytesIO(body))  # type: ignore[arg-type]
+    events: list[dict[str, Any]] = []
+
+    class RecordingLogger:
+        def info(self, event: str, **fields: Any) -> None:
+            events.append({"event": event, **fields})
+
+    monkeypatch.setattr(llm, "logger", RecordingLogger())
+    provider, _ = _provider(monkeypatch, [error])
+    with pytest.raises(RuntimeError, match="llm_unavailable"):
+        provider.generate_structured("p", {})
+    assert events and all(canary not in str(event) for event in events)
+    assert any(event.get("gemini_status") == "INVALID_ARGUMENT" for event in events)

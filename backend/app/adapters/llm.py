@@ -12,14 +12,14 @@ import structlog
 logger = structlog.get_logger("llm")
 
 
-def _gemini_error(error: HTTPError, api_key: str) -> tuple[str, str]:
-    """Statut et message court renvoyés par Gemini (sans clé ; jamais le prompt ni la réponse)."""
+def _gemini_status(error: HTTPError) -> str:
+    """Statut symbolique de Gemini (ex. INVALID_ARGUMENT). Le message n'est jamais journalisé :
+    il peut reprendre une partie de la requête, donc du texte patient (N-19)."""
     try:
         detail = json.loads(error.read().decode("utf-8", errors="replace"))["error"]
-        status, message = str(detail.get("status", "")), str(detail.get("message", ""))
+        return str(detail.get("status", ""))[:40]
     except (ValueError, KeyError, TypeError, AttributeError, OSError):
-        return "", ""
-    return status[:40], message.replace(api_key, "[REDACTED]")[:200] if api_key else message[:200]
+        return ""
 
 
 def to_gemini_schema(schema: Any) -> Any:
@@ -44,7 +44,9 @@ def to_gemini_schema(schema: Any) -> Any:
 
 
 class GeminiLlmProvider:
-    """Gemini : nouvelle tentative brève puis modèles de repli si le service est surchargé."""
+    """Gemini : nouvelle tentative brève puis modèles de repli si le service est surchargé.
+    Délai maximal : chaque appel est borné par `timeout_seconds`, l'ensemble par
+    `total_timeout_seconds` (au-delà, TimeoutError, sans nouvel appel)."""
 
     def __init__(
         self,
@@ -54,12 +56,16 @@ class GeminiLlmProvider:
         fallback_models: tuple[str, ...] = (),
         attempts_per_model: int = 2,
         sleep: Callable[[float], None] = time.sleep,
+        total_timeout_seconds: float = 150.0,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self._api_key = api_key
         self._models = (model, *(m for m in fallback_models if m != model))
         self._timeout_seconds = timeout_seconds
+        self._total_timeout_seconds = total_timeout_seconds
         self._attempts = attempts_per_model
         self._sleep = sleep
+        self._clock = clock
 
     def generate_structured(self, prompt: str, schema: dict[str, Any]) -> dict[str, Any]:
         payload = {
@@ -69,11 +75,15 @@ class GeminiLlmProvider:
                 "responseSchema": to_gemini_schema(schema),
             },
         }
-        failure: Exception | None = None
+        deadline = self._clock() + self._total_timeout_seconds
+        failure: _Retryable | None = None
         for model in self._models:
             for attempt in range(self._attempts):
+                remaining = deadline - self._clock()
+                if remaining <= 0:
+                    raise TimeoutError("llm_timeout")
                 try:
-                    body = self._call(model, payload)
+                    body = self._call(model, payload, min(self._timeout_seconds, remaining))
                 except _Retryable as error:
                     failure = error
                     if error.fatal:
@@ -84,11 +94,11 @@ class GeminiLlmProvider:
                         self._sleep(1.5 * (attempt + 1))
                     continue
                 return self._parse(body)
-        if isinstance(failure, _Retryable) and failure.timeout:
+        if failure is not None and failure.timeout:
             raise TimeoutError("llm_timeout") from failure
         raise RuntimeError("llm_unavailable") from failure
 
-    def _call(self, model: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def _call(self, model: str, payload: dict[str, Any], timeout: float) -> dict[str, Any]:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
         request = Request(  # noqa: S310
             url,
@@ -109,19 +119,17 @@ class GeminiLlmProvider:
             )
 
         try:
-            with urlopen(request, timeout=self._timeout_seconds) as response:  # noqa: S310  # nosec B310
+            with urlopen(request, timeout=timeout) as response:  # noqa: S310  # nosec B310
                 body: dict[str, Any] = json.loads(response.read().decode("utf-8"))
         except TimeoutError as error:
             log("timeout", error_type="TimeoutError")
             raise _Retryable(timeout=True) from error
         except HTTPError as error:
-            status, message = _gemini_error(error, self._api_key)
             log(
                 "http_error",
                 http_status=error.code,
                 error_type="HTTPError",
-                gemini_status=status,
-                gemini_message=message,
+                gemini_status=_gemini_status(error),
             )
             # 400/401/403 : requête ou clé invalide, identique pour tous les modèles (pas de repli).
             raise _Retryable(timeout=False, fatal=error.code in {400, 401, 403}) from error
