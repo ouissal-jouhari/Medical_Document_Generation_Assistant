@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ApiError, api, type GeneratedDocument } from "./api";
 import { messageFor } from "./messages";
@@ -14,8 +14,11 @@ export function TextAndDocument({ token, id, onExpired, onBack }: Props) {
   const [text, setText] = useState("");
   const [documentType, setDocumentType] = useState("clinical_note");
   const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [document, setDocument] = useState<GeneratedDocument | null>(null);
+  // Garde synchrone : un double clic ne lance jamais deux générations (l'état React est asynchrone).
+  const inFlight = useRef(false);
 
   useEffect(() => {
     api<{ consultation_text: string | null }>(token, `/consultations/${id}`)
@@ -33,7 +36,21 @@ export function TextAndDocument({ token, id, onExpired, onBack }: Props) {
     });
   };
 
+  const save = async () => {
+    setError(null);
+    setSaved(false);
+    try {
+      await saveText();
+      setSaved(true);
+    } catch (e: unknown) {
+      if (e instanceof ApiError && e.status === 401) onExpired();
+      else setError(messageFor(e instanceof ApiError ? e.code : "error"));
+    }
+  };
+
   const generate = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -47,6 +64,7 @@ export function TextAndDocument({ token, id, onExpired, onBack }: Props) {
       if (e instanceof ApiError && e.status === 401) onExpired();
       else setError(messageFor(e instanceof ApiError ? e.code : "error"));
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
@@ -67,7 +85,10 @@ export function TextAndDocument({ token, id, onExpired, onBack }: Props) {
         <textarea
           maxLength={5000}
           value={text}
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => {
+            setText(event.target.value);
+            setSaved(false);
+          }}
         />
       </label>
       <p>{text.length} / 5000 characters</p>
@@ -77,9 +98,13 @@ export function TextAndDocument({ token, id, onExpired, onBack }: Props) {
           Adding the consultation text is recommended.
         </p>
       )}
+      {saved && <p role="status">Text saved.</p>}
       {error && <p role="alert">{error}</p>}
       <button type="button" onClick={onBack} disabled={busy}>
         Cancel
+      </button>
+      <button type="button" onClick={() => void save()} disabled={busy}>
+        Save text
       </button>
       <button type="button" onClick={() => void generate()} disabled={busy}>
         {busy ? "Generating…" : "Generate draft"}
@@ -100,16 +125,16 @@ export function TextAndDocument({ token, id, onExpired, onBack }: Props) {
             </p>
             <h4>Diagnoses (coded)</h4>
             <ul>
-              {document.sections.common_block.diagnoses.map((item) => (
-                <li key={item.code}>
+              {document.sections.common_block.diagnoses.map((item, index) => (
+                <li key={`${index}-${item.code}`}>
                   {item.code}: {item.description}
                 </li>
               ))}
             </ul>
             <h4>Procedures (coded)</h4>
             <ul>
-              {document.sections.common_block.procedures.map((item) => (
-                <li key={item.code}>
+              {document.sections.common_block.procedures.map((item, index) => (
+                <li key={`${index}-${item.code}`}>
                   {item.code}: {item.description}
                 </li>
               ))}
