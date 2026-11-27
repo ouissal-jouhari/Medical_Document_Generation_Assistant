@@ -87,3 +87,21 @@ class LlmTimeout(SafeError):
 
 class MalformedGeneration(SafeError):
     code = "malformed_generation"
+
+
+class DocumentApproved(SafeError):
+    """Document approuvé : figé, aucune modification possible (F-17)."""
+
+    code = "document_approved"
+
+
+class VersionConflict(SafeError):
+    """La version attendue n'est plus la version courante (édition concurrente, F-14)."""
+
+    code = "version_conflict"
+
+
+class ApprovalBlocked(SafeError):
+    """Approbation impossible : `extra["missing"]` liste les éléments manquants (N-11)."""
+
+    code = "approval_blocked"

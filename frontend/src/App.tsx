@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { isCallback, userManager } from "./auth";
 import { Consultations } from "./Consultations";
+import { DocumentReview } from "./DocumentReview";
 import { NewConsultation } from "./NewConsultation";
 import { ReviewData } from "./ReviewData";
 import { TextAndDocument } from "./TextAndDocument";
@@ -142,7 +143,8 @@ type Screen =
   | { name: "list" }
   | { name: "new"; existingId?: string }
   | { name: "review"; id: string }
-  | { name: "generation"; id: string };
+  | { name: "generation"; id: string }
+  | { name: "document"; id: string; consultationId: string };
 
 type ShellProps = { token: string; displayName: string; onLogout: () => void; onExpired: () => void };
 
@@ -195,6 +197,21 @@ function Shell({ token, displayName, onLogout, onExpired }: ShellProps) {
           id={screen.id}
           onExpired={onExpired}
           onBack={() => setScreen({ name: "list" })}
+          onOpenDocument={(documentId) =>
+            setScreen({ name: "document", id: documentId, consultationId: screen.id })
+          }
+        />
+      )}
+      {screen.name === "document" && (
+        <DocumentReview
+          key={screen.id}
+          token={token}
+          id={screen.id}
+          onExpired={onExpired}
+          onBack={() => setScreen({ name: "generation", id: screen.consultationId })}
+          onOpen={(documentId) =>
+            setScreen({ name: "document", id: documentId, consultationId: screen.consultationId })
+          }
         />
       )}
     </section>

@@ -6,12 +6,14 @@ from uuid import UUID
 
 from fastapi import APIRouter, Response, UploadFile
 
-from app.adapters.models import Consultation, Document
+from app.adapters.models import Consultation
 from app.api.deps import (
     ClinicianUser,
     ConsultationServiceDep,
     GenerationServiceDep,
+    ReviewServiceDep,
 )
+from app.api.routes.documents import document_out
 from app.api.schemas import (
     ConsultationOut,
     ConsultationSummary,
@@ -136,40 +138,24 @@ def save_consultation_text(
     }
 
 
-def _document_out(document: Document) -> DocumentOut:
-    return DocumentOut(
-        id=document.id,
-        consultation_id=document.consultation_id,
-        document_type=document.document_type,
-        state=document.state,
-        version=document.version,
-        text_snapshot=document.text_snapshot,
-        sections=document.sections,
-        created_at=document.created_at,
-    )
-
-
 @router.post("/{consultation_id}/documents", status_code=201)
 def generate_document(
     consultation_id: UUID,
     body: DocumentGenerateIn,
     user: ClinicianUser,
     service: GenerationServiceDep,
+    review: ReviewServiceDep,
 ) -> DocumentOut:
     document = service.generate(user.id, consultation_id, body.document_type)
-    return _document_out(document)
+    return document_out(review.view_of(document))
 
 
 @router.get("/{consultation_id}/documents")
 def list_documents(
-    consultation_id: UUID, user: ClinicianUser, service: GenerationServiceDep
+    consultation_id: UUID,
+    user: ClinicianUser,
+    service: GenerationServiceDep,
+    review: ReviewServiceDep,
 ) -> list[DocumentOut]:
     documents = service.list_documents(user.id, consultation_id)
-    return [_document_out(document) for document in documents]
-
-
-@router.get("/documents/{document_id}")
-def get_document(
-    document_id: UUID, user: ClinicianUser, service: GenerationServiceDep
-) -> DocumentOut:
-    return _document_out(service.get_document(user.id, document_id))
+    return [document_out(review.view_of(document)) for document in documents]

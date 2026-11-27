@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 90.0
     llm_total_timeout_seconds: float = 150.0
     template_dir: str = "app/templates"
+    # Coordonnées de la clinique (H-01) : configuration seulement, valeurs fictives par défaut.
+    clinic_name: str = "XeleronIA Demo Clinic"
+    clinic_address: str = "1 Example Street"
+    clinic_city: str = "Springfield"
+    clinic_postal_code: str = "00000"
+    clinic_phone: str = "+1 555 0100"
+    clinic_email: str = "contact@clinic.example"
+    clinic_website: str = "https://clinic.example"
 
 
 @lru_cache

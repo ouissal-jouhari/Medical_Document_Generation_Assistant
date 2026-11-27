@@ -6,7 +6,13 @@ from uuid import UUID
 import pytest
 from sqlalchemy import select
 
-from app.adapters.models import AuditEventRow, Consultation, ConsultationCorrection, Document
+from app.adapters.models import (
+    AuditEventRow,
+    Consultation,
+    ConsultationCorrection,
+    Document,
+    DocumentVersion,
+)
 from app.api.deps import get_file_store
 from tests.conftest import CANARY, Api
 from tests.superbill_samples import CLEAN_TEXT, EXPECTED_CLEAN, pdf_with_text
@@ -62,6 +68,7 @@ def test_F22_deletion_removes_everything_and_keeps_a_minimal_audit_trace(api: Ap
     with api.session() as session:
         assert session.scalars(select(Consultation)).all() == []
         assert session.scalars(select(Document)).all() == []
+        assert session.scalars(select(DocumentVersion)).all() == []
         assert session.scalars(select(ConsultationCorrection)).all() == []
         events = session.scalars(select(AuditEventRow)).all()
     with pytest.raises(FileNotFoundError):
@@ -69,7 +76,7 @@ def test_F22_deletion_removes_everything_and_keeps_a_minimal_audit_trace(api: Ap
     deleted = [e for e in events if e.action == "consultation_deleted"]
     assert len(deleted) == 1
     assert deleted[0].document_id is None and deleted[0].version is None
-    assert any(e.action == "document_generated" for e in events)  # l'audit existant est intact
+    assert any(e.action == "generated" for e in events)  # l'audit existant est intact
     dumped = repr([(e.actor_id, e.action, e.document_id, e.version) for e in events])
     for private in (CANARY, "Jane", consultation_id):
         assert private not in dumped

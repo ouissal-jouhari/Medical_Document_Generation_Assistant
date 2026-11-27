@@ -54,6 +54,9 @@ SAFE_STATUS = {
     "llm_unavailable": 503,
     "llm_timeout": 504,
     "malformed_generation": 502,
+    "document_approved": 409,
+    "version_conflict": 409,
+    "approval_blocked": 409,
 }
 
 

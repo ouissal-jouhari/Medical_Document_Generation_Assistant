@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request, Response
 
 from app.adapters.templates import load_templates
 from app.api.routes.consultations import router as consultations_router
+from app.api.routes.documents import router as documents_router
 from app.api.routes.health import router as health_router
 from app.api.routes.me import router as me_router
 from app.core.config import get_settings
@@ -43,6 +44,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(me_router)
     app.include_router(consultations_router)
+    app.include_router(documents_router)
     return app
 
 

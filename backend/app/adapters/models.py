@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -66,7 +66,11 @@ class Consultation(Base):
 
 
 class Document(Base):
-    """Brouillon IA versionné ; chaque ligne porte un instantané de texte."""
+    """Document d'une consultation (SRS 9.1). `version` est le numéro de la version courante.
+
+    Les champs d'approbation (approbateur, instantané de la clinique) sont écrits une seule
+    fois, à l'approbation (F-17, H-02) ; le domaine refuse ensuite toute modification.
+    """
 
     __tablename__ = "document"
 
@@ -76,9 +80,49 @@ class Document(Base):
     document_type: Mapped[str] = mapped_column(String(32))
     state: Mapped[str] = mapped_column(String(16), default="under_review")
     version: Mapped[int] = mapped_column(Integer, default=1)
-    text_snapshot: Mapped[str | None] = mapped_column(Text, nullable=True)
-    sections: Mapped[dict[str, Any]] = mapped_column(JsonType)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_by: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
+    approver_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    approved_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    clinic_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JsonType, nullable=True)
+
+    # Verrou optimiste : chaque UPDATE porte « WHERE version = <version lue> » (F-14).
+    __mapper_args__ = {"version_id_col": version, "version_id_generator": False}
+
+
+class DocumentVersion(Base):
+    """Version immuable (F-14) : le rôle applicatif n'a ni UPDATE ni DELETE hors F-22.
+
+    Contrainte d'unicité (document, numéro) : deux éditions concurrentes ne peuvent pas créer
+    la même version.
+    """
+
+    __tablename__ = "document_version"
+    __table_args__ = (UniqueConstraint("document_id", "number", name="uq_document_version"),)
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    document_id: Mapped[UUID] = mapped_column(ForeignKey("document.id"), index=True)
+    number: Mapped[int] = mapped_column(Integer)
+    kind: Mapped[str] = mapped_column(String(16))
+    restored_from: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    author_id: Mapped[UUID] = mapped_column(Uuid)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    text_snapshot: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content: Mapped[dict[str, Any]] = mapped_column(JsonType)
+
+
+class DocumentVersionEvent(Base):
+    """Marque « relu » ou « rejeté » posée sur une version (F-15, F-26). Ajout seul."""
+
+    __tablename__ = "document_version_event"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    document_id: Mapped[UUID] = mapped_column(ForeignKey("document.id"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    mark: Mapped[str] = mapped_column(String(16))
+    actor_id: Mapped[UUID] = mapped_column(Uuid)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class ConsultationCorrection(Base):

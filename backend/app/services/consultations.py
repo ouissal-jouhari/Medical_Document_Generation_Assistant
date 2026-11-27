@@ -15,7 +15,14 @@ from sqlalchemy.orm import Session
 
 from app.adapters.author_scoped import AuthorScopedRepository
 from app.adapters.file_inspector import FileInfo, inspect_upload
-from app.adapters.models import AuditEventRow, Consultation, ConsultationCorrection, Document
+from app.adapters.models import (
+    AuditEventRow,
+    Consultation,
+    ConsultationCorrection,
+    Document,
+    DocumentVersion,
+    DocumentVersionEvent,
+)
 from app.adapters.storage import LocalFileStore
 from app.domain.clock import Clock
 from app.domain.consultation import ConsultationState
@@ -94,6 +101,9 @@ class ConsultationService:
         garde qu'une trace minimale (acteur, action, date), sans donnée patient."""
         consultation = self.get(author_id, consultation_id)
         storage_key = consultation.storage_key
+        documents = select(Document.id).where(Document.consultation_id == consultation.id)
+        for child in (DocumentVersionEvent, DocumentVersion):
+            self._session.execute(delete(child).where(child.document_id.in_(documents)))
         self._session.execute(delete(Document).where(Document.consultation_id == consultation.id))
         self._session.execute(
             delete(ConsultationCorrection).where(

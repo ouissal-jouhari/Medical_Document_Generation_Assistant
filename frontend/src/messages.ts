@@ -15,6 +15,22 @@ export const ERROR_MESSAGES: Record<string, string> = {
   llm_unavailable: "Document generation is unavailable. You can retry.",
   llm_timeout: "Document generation took too long. You can retry.",
   malformed_generation: "Document generation failed safely. You can retry.",
+  version_conflict: "The document changed in the meantime. Reload it before trying again.",
+  document_approved: "This document is approved and can no longer be modified.",
+  approval_blocked: "Approval is not possible yet.",
+};
+
+// Éléments bloquant l'approbation (N-11) : libellés fixes, les noms de section sont affichés tels quels.
+export const BLOCKER_LABELS: Record<string, string> = {
+  not_reviewed: "The current version has not been marked as reviewed",
+  version_rejected: "The current version is rejected",
+  patient_name: "Patient name",
+  date_of_birth: "Date of birth",
+  patient_id: "Patient ID",
+  physician: "Physician",
+  date_of_service: "Date of service",
+  diagnoses: "Coded diagnoses",
+  procedures: "Coded procedures",
 };
 
 export const EXTRACTION_FAILED_MESSAGE =
