@@ -34,6 +34,24 @@ export type Summary = {
   extraction_failures: number;
 };
 
+export type DocumentSection = {
+  name: string;
+  status: "PROVIDED" | "NOT_PROVIDED";
+  content: string | null;
+  sources: { citation: string; start: number; end: number; kind: string }[];
+};
+
+export type GeneratedDocument = {
+  id: string;
+  consultation_id: string;
+  document_type: "clinical_note" | "referral_letter" | "discharge_summary";
+  state: "under_review";
+  version: number;
+  text_snapshot: string | null;
+  sections: { template: string; sections: DocumentSection[] };
+  created_at: string;
+};
+
 /** Erreur d'API : seul le code stable est exposé, jamais de détail technique (N-11). */
 export class ApiError extends Error {
   constructor(

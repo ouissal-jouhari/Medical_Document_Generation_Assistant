@@ -6,12 +6,19 @@ from uuid import UUID
 
 from fastapi import APIRouter, UploadFile
 
-from app.adapters.models import Consultation
-from app.api.deps import ClinicianUser, ConsultationServiceDep
+from app.adapters.models import Consultation, Document
+from app.api.deps import (
+    ClinicianUser,
+    ConsultationServiceDep,
+    GenerationServiceDep,
+)
 from app.api.schemas import (
     ConsultationOut,
     ConsultationSummary,
+    ConsultationTextIn,
     CorrectionOut,
+    DocumentGenerateIn,
+    DocumentOut,
     IssueOut,
     SuperbillIn,
 )
@@ -38,6 +45,8 @@ def _out(
             CorrectionOut(field=c.field, author_id=c.author_id, changed_at=c.changed_at)
             for c in service.corrections(consultation)
         ],
+        consultation_text=consultation.consultation_text,
+        consultation_text_updated_at=consultation.consultation_text_updated_at,
     )
 
 
@@ -102,3 +111,57 @@ def validate_data(
     consultation_id: UUID, user: ClinicianUser, service: ConsultationServiceDep
 ) -> ConsultationOut:
     return _out(service, service.validate(user.id, consultation_id))
+
+
+@router.put("/{consultation_id}/text")
+def save_consultation_text(
+    consultation_id: UUID,
+    body: ConsultationTextIn,
+    user: ClinicianUser,
+    service: GenerationServiceDep,
+) -> dict[str, object]:
+    consultation = service.set_text(user.id, consultation_id, body.text)
+    return {
+        "id": consultation.id,
+        "consultation_text": consultation.consultation_text,
+        "consultation_text_updated_at": consultation.consultation_text_updated_at,
+    }
+
+
+def _document_out(document: Document) -> DocumentOut:
+    return DocumentOut(
+        id=document.id,
+        consultation_id=document.consultation_id,
+        document_type=document.document_type,
+        state=document.state,
+        version=document.version,
+        text_snapshot=document.text_snapshot,
+        sections=document.sections,
+        created_at=document.created_at,
+    )
+
+
+@router.post("/{consultation_id}/documents", status_code=201)
+def generate_document(
+    consultation_id: UUID,
+    body: DocumentGenerateIn,
+    user: ClinicianUser,
+    service: GenerationServiceDep,
+) -> DocumentOut:
+    document = service.generate(user.id, consultation_id, body.document_type)
+    return _document_out(document)
+
+
+@router.get("/{consultation_id}/documents")
+def list_documents(
+    consultation_id: UUID, user: ClinicianUser, service: GenerationServiceDep
+) -> list[DocumentOut]:
+    documents = service.list_documents(user.id, consultation_id)
+    return [_document_out(document) for document in documents]
+
+
+@router.get("/documents/{document_id}")
+def get_document(
+    document_id: UUID, user: ClinicianUser, service: GenerationServiceDep
+) -> DocumentOut:
+    return _document_out(service.get_document(user.id, document_id))

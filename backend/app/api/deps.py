@@ -16,15 +16,19 @@ from app.adapters.db import make_engine
 from app.adapters.docling_converter import DoclingMarkdownConverter
 from app.adapters.extraction import HybridOcrProvider
 from app.adapters.icd_table import load_known_icd
+from app.adapters.llm import GeminiLlmProvider, OllamaLlmProvider
 from app.adapters.models import User
 from app.adapters.oidc import OidcIdentityProvider
 from app.adapters.storage import LocalFileStore
+from app.adapters.templates import DocumentTemplate, load_templates
 from app.core.config import get_settings
 from app.domain.auth import Permission, permissions_of
 from app.domain.clock import Clock, SystemClock
 from app.domain.errors import AuthenticationRequired, Forbidden, MfaRequired
 from app.ports import IdentityProvider, OcrProvider
+from app.ports.llm import LlmProvider
 from app.services.consultations import ConsultationService
+from app.services.generation import GenerationService
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -124,6 +128,27 @@ def get_file_store() -> LocalFileStore:
     return LocalFileStore(get_settings().storage_dir)
 
 
+@lru_cache
+def get_llm_provider() -> LlmProvider:
+    settings = get_settings()
+    if settings.llm_provider.lower() == "ollama":
+        return OllamaLlmProvider(
+            settings.ollama_base_url,
+            settings.ollama_model,
+            settings.llm_timeout_seconds,
+        )
+    return GeminiLlmProvider(
+        settings.gemini_api_key.get_secret_value(),
+        settings.llm_model,
+        settings.llm_timeout_seconds,
+    )
+
+
+@lru_cache
+def get_templates() -> dict[str, DocumentTemplate]:
+    return load_templates(get_settings().template_dir)
+
+
 def get_consultation_service(
     session: Session = Depends(get_session),
     clock: Clock = Depends(get_clock),
@@ -136,4 +161,14 @@ def get_consultation_service(
     )
 
 
+def get_generation_service(
+    session: Session = Depends(get_session),
+    clock: Clock = Depends(get_clock),
+    llm: LlmProvider = Depends(get_llm_provider),
+    templates: dict[str, DocumentTemplate] = Depends(get_templates),
+) -> GenerationService:
+    return GenerationService(session, clock, llm, templates)
+
+
 ConsultationServiceDep = Annotated[ConsultationService, Depends(get_consultation_service)]
+GenerationServiceDep = Annotated[GenerationService, Depends(get_generation_service)]

@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     max_upload_bytes: int = 50 * 1024 * 1024
     docling_artifacts_path: str | None = None
     extraction_timeout_seconds: float = 300.0
+    llm_provider: str = "gemini"
+    llm_model: str = "gemini-2.5-flash"
+    gemini_api_key: SecretStr = SecretStr("")
+    ollama_base_url: str = "http://ollama:11434"
+    ollama_model: str = "gpt-oss-20b"
+    llm_timeout_seconds: float = 20.0
+    template_dir: str = "app/templates"
 
 
 @lru_cache

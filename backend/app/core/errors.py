@@ -51,6 +51,9 @@ SAFE_STATUS = {
     "image_too_large": 422,
     "wrong_state": 409,
     "validation_failed": 422,
+    "llm_unavailable": 503,
+    "llm_timeout": 504,
+    "malformed_generation": 502,
 }
 
 

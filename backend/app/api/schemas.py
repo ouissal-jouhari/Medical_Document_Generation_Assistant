@@ -83,3 +83,32 @@ class ConsultationOut(BaseModel):
     data: dict[str, Any] | None
     issues: list[IssueOut]
     corrections: list[CorrectionOut]
+    consultation_text: str | None = None
+    consultation_text_updated_at: datetime | None = None
+
+
+class ConsultationTextIn(_In):
+    text: Annotated[str | None, StringConstraints(max_length=5000)] = None
+
+
+class DocumentGenerateIn(_In):
+    document_type: str = Field(alias="documentType")
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+
+class DocumentSectionOut(BaseModel):
+    name: str
+    status: str
+    content: str | None
+    sources: list[dict[str, Any]]
+
+
+class DocumentOut(BaseModel):
+    id: UUID
+    consultation_id: UUID
+    document_type: str
+    state: str
+    version: int
+    text_snapshot: str | None
+    sections: dict[str, Any]
+    created_at: datetime

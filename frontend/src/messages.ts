@@ -12,6 +12,9 @@ export const ERROR_MESSAGES: Record<string, string> = {
   network_error: "Service indisponible. Réessayez.",
   identity_provider_unavailable: "Service d'identification indisponible. Réessayez.",
   forbidden: "Accès refusé.",
+  llm_unavailable: "Document generation is unavailable. You can retry.",
+  llm_timeout: "Document generation took too long. You can retry.",
+  malformed_generation: "Document generation failed safely. You can retry.",
 };
 
 export const EXTRACTION_FAILED_MESSAGE =
