@@ -75,3 +75,15 @@ class ValidationFailed(SafeError):
 
 class ExtractionError(Exception):
     """Échec technique d'extraction (interne). Le détail n'est jamais exposé ni journalisé."""
+
+
+class LlmUnavailable(SafeError):
+    code = "llm_unavailable"
+
+
+class LlmTimeout(SafeError):
+    code = "llm_timeout"
+
+
+class MalformedGeneration(SafeError):
+    code = "malformed_generation"

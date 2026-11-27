@@ -50,7 +50,7 @@ Dire : « Démarre le jalon N ». Le contenu du jalon N est alors lu, puis exéc
 | 1 | Socle technique et CI/CD | S1 | j1–j4 | EN COURS (DEV et validation reportés) |
 | 2 | Authentification, contrôle d'accès et audit | S1–S2 | j5–j8 | TERMINÉ |
 | 3 | Superbill : dépôt, extraction, vérification | S2–S3 | j9–j15 | TERMINÉ (validé par l'utilisateur) |
-| 4 | Texte de consultation et génération | S4–S5 | j16–j23 | À FAIRE |
+| 4 | Texte de consultation et génération | S4–S5 | j16–j23 | EN COURS |
 | 5 | Revue, versions et approbation | S5–S6 | j24–j30 | À FAIRE |
 | 6 | Export, provenance, suppression et conservation | S7 | j31–j35 | À FAIRE |
 | 7 | Évaluation IA, tests, observabilité, démonstration | S8 | j36–j40 | À FAIRE |

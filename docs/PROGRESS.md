@@ -2,12 +2,11 @@
 ## Fait
 - Jalon 2 : TERMINÉ (validé).
 - Jalon 3 : TERMINÉ (validé le 2026-11-26).
+- Jalon 4 : implémentation démarrée ; maquette E-05 et ADR 0010 produits.
+- Jalon 4 : 110 tests passés, 7 PostgreSQL ignorés localement ; Ruff, mypy, Bandit, ESLint et build verts.
 ## En cours
-Jalon 4 : en attente de démarrage.
+- Jalon 4 : EN COURS ; validation utilisateur requise.
 ## Reste ouvert (écarts notés)
-- Jalon 1 : hôte DEV (P13), déploiement DEV, preuve du chiffrement au repos ; « jalon validé » non donné.
+- Jalon 1 : hôte DEV (P13), déploiement/chiffrement au repos ; « jalon validé » non donné.
 - Jalon 2 : test automatique de la redirection navigateur (Playwright) reporté au jalon 7.
-- Jalon 3 : extraction d'un scan à froid : 43 s en CI, 90 à 110 s sur le poste (objectif 20 s non atteint, mesuré, ADR 0007). Docling peut perdre des lignes de tableau : à mesurer au jalon 7.
-## Notes
-- ADR 0007 (extraction), 0008 (parsing, échecs, corrections), 0009 (fichiers, table ICD-10-CM FY2026).
-- Placeholders change-me-* dans .env : à remplacer avant tout déploiement hébergé.
+- Jalon 3 : extraction froide 43 s en CI / 90–110 s poste (objectif non atteint) ; placeholder .env à remplacer avant déploiement.

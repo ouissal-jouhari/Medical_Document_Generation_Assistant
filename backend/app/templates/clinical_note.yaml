@@ -1,0 +1,15 @@
+id: clinical_note
+title: Clinical Note
+sections:
+  - name: Chief Complaint
+    status: NOT_PROVIDED
+    citation_required: true
+  - name: History of Present Illness
+    status: NOT_PROVIDED
+    citation_required: true
+  - name: Assessment
+    status: NOT_PROVIDED
+    citation_required: true
+  - name: Plan
+    status: NOT_PROVIDED
+    citation_required: true

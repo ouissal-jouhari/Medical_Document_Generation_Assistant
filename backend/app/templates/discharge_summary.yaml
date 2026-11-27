@@ -1,0 +1,12 @@
+id: discharge_summary
+title: Discharge Summary
+sections:
+  - name: Hospital Course
+    status: NOT_PROVIDED
+    citation_required: true
+  - name: Discharge Diagnosis
+    status: PROVIDED
+    citation_required: false
+  - name: Discharge Instructions
+    status: NOT_PROVIDED
+    citation_required: true

@@ -59,6 +59,26 @@ class Consultation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    consultation_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    consultation_text_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class Document(Base):
+    """Brouillon IA versionné ; chaque ligne porte un instantané de texte."""
+
+    __tablename__ = "document"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    consultation_id: Mapped[UUID] = mapped_column(ForeignKey("consultation.id"), index=True)
+    author_id: Mapped[UUID] = mapped_column(Uuid, index=True)
+    document_type: Mapped[str] = mapped_column(String(32))
+    state: Mapped[str] = mapped_column(String(16), default="under_review")
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    text_snapshot: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sections: Mapped[dict[str, Any]] = mapped_column(JsonType)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class ConsultationCorrection(Base):

@@ -4,6 +4,7 @@ import { isCallback, userManager } from "./auth";
 import { Consultations } from "./Consultations";
 import { NewConsultation } from "./NewConsultation";
 import { ReviewData } from "./ReviewData";
+import { TextAndDocument } from "./TextAndDocument";
 
 type View =
   | { name: "loading" }
@@ -140,7 +141,8 @@ export function App() {
 type Screen =
   | { name: "list" }
   | { name: "new"; existingId?: string }
-  | { name: "review"; id: string };
+  | { name: "review"; id: string }
+  | { name: "generation"; id: string };
 
 type ShellProps = { token: string; displayName: string; onLogout: () => void; onExpired: () => void };
 
@@ -160,7 +162,13 @@ function Shell({ token, displayName, onLogout, onExpired }: ShellProps) {
           onExpired={onExpired}
           onNew={() => setScreen({ name: "new" })}
           onOpen={(id, state) =>
-            setScreen(state === "uploaded" ? { name: "new", existingId: id } : { name: "review", id })
+            setScreen(
+              state === "uploaded"
+                ? { name: "new", existingId: id }
+                : state === "parsed"
+                  ? { name: "review", id }
+                  : { name: "generation", id },
+            )
           }
         />
       )}
@@ -175,6 +183,14 @@ function Shell({ token, displayName, onLogout, onExpired }: ShellProps) {
       )}
       {screen.name === "review" && (
         <ReviewData
+          token={token}
+          id={screen.id}
+          onExpired={onExpired}
+          onBack={() => setScreen({ name: "list" })}
+        />
+      )}
+      {screen.name === "generation" && (
+        <TextAndDocument
           token={token}
           id={screen.id}
           onExpired={onExpired}

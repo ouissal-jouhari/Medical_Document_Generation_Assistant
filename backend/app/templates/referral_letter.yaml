@@ -1,0 +1,12 @@
+id: referral_letter
+title: Referral Letter
+sections:
+  - name: Reason for Referral
+    status: NOT_PROVIDED
+    citation_required: true
+  - name: Clinical Summary
+    status: NOT_PROVIDED
+    citation_required: true
+  - name: Requested Evaluation
+    status: NOT_PROVIDED
+    citation_required: true
