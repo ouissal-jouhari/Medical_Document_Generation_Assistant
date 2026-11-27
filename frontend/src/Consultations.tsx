@@ -10,7 +10,7 @@ type Props = {
   onExpired: () => void;
 };
 
-// E-02 : liste des consultations de l'auteur. La suppression arrive au jalon 6 (bouton inactif).
+// E-02 : liste des consultations de l'auteur ; suppression définitive après confirmation (F-22).
 export function Consultations({ token, onNew, onOpen, onExpired }: Props) {
   const [rows, setRows] = useState<Summary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +23,20 @@ export function Consultations({ token, onNew, onOpen, onExpired }: Props) {
         else setError(messageFor(e instanceof ApiError ? e.code : "error"));
       });
   }, [token, onExpired]);
+
+  const remove = async (id: string) => {
+    const confirmed = window.confirm(
+      "Supprimer définitivement cette consultation, son texte, ses documents et ses versions ?",
+    );
+    if (!confirmed) return;
+    try {
+      await api<void>(token, `/consultations/${id}`, { method: "DELETE" });
+      setRows((current) => (current ?? []).filter((row) => row.id !== id));
+    } catch (e: unknown) {
+      if (e instanceof ApiError && e.status === 401) onExpired();
+      else setError(messageFor(e instanceof ApiError ? e.code : "error"));
+    }
+  };
 
   const action = (state: Summary["state"]) =>
     state === "uploaded" ? "Reprendre" : state === "parsed" ? "Vérifier" : "Ouvrir";
@@ -58,7 +72,7 @@ export function Consultations({ token, onNew, onOpen, onExpired }: Props) {
                   </button>
                 </td>
                 <td>
-                  <button type="button" disabled title="Disponible au jalon 6">
+                  <button type="button" onClick={() => void remove(row.id)}>
                     Supprimer
                   </button>
                 </td>
