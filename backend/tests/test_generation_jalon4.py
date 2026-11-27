@@ -265,8 +265,11 @@ def test_F07_text_stays_editable_after_generation_and_each_document_keeps_its_sn
     documents = api.client.get(
         f"/consultations/{consultation_id}/documents", headers=api.headers()
     ).json()
-    snapshots = {d["version"]: d["text_snapshot"] for d in documents}
-    assert snapshots == {1: "First text.", 2: "Edited text."}
+    snapshots = {d["id"]: d["text_snapshot"] for d in documents}
+    assert snapshots == {
+        first.json()["id"]: "First text.",
+        second.json()["id"]: "Edited text.",
+    }
 
 
 def test_N02_each_generation_logs_llm_validation_and_total_durations(
@@ -475,8 +478,8 @@ def test_F25_generation_routes_hide_documents_of_another_clinician(api: Api) -> 
     assert created.status_code == 201
     document_id = created.json()["id"]
     other = api.headers(subject="clin-other")
-    foreign_read = api.client.get(f"/consultations/documents/{document_id}", headers=other)
-    absent_read = api.client.get(f"/consultations/documents/{uuid4()}", headers=other)
+    foreign_read = api.client.get(f"/documents/{document_id}", headers=other)
+    absent_read = api.client.get(f"/documents/{uuid4()}", headers=other)
     assert foreign_read.status_code == 404
     assert (foreign_read.status_code, foreign_read.json()) == (
         absent_read.status_code,

@@ -23,12 +23,14 @@ from app.adapters.storage import LocalFileStore
 from app.adapters.templates import DocumentTemplate, load_templates
 from app.core.config import get_settings
 from app.domain.auth import Permission, permissions_of
+from app.domain.clinic import ClinicProfile
 from app.domain.clock import Clock, SystemClock
 from app.domain.errors import AuthenticationRequired, Forbidden, MfaRequired
 from app.ports import IdentityProvider, OcrProvider
 from app.ports.llm import LlmProvider
 from app.services.consultations import ConsultationService
 from app.services.generation import GenerationService
+from app.services.review import ReviewService
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -172,5 +174,29 @@ def get_generation_service(
     return GenerationService(session, clock, llm, templates)
 
 
+def get_clinic_profile() -> ClinicProfile:
+    """Coordonnées constantes de la clinique (H-01) : configuration seulement."""
+    settings = get_settings()
+    return ClinicProfile(
+        name=settings.clinic_name,
+        address=settings.clinic_address,
+        city=settings.clinic_city,
+        postal_code=settings.clinic_postal_code,
+        phone=settings.clinic_phone,
+        email=settings.clinic_email,
+        website=settings.clinic_website,
+    )
+
+
+def get_review_service(
+    session: Session = Depends(get_session),
+    clock: Clock = Depends(get_clock),
+    generation: GenerationService = Depends(get_generation_service),
+    clinic: ClinicProfile = Depends(get_clinic_profile),
+) -> ReviewService:
+    return ReviewService(session, clock, generation, clinic)
+
+
 ConsultationServiceDep = Annotated[ConsultationService, Depends(get_consultation_service)]
 GenerationServiceDep = Annotated[GenerationService, Depends(get_generation_service)]
+ReviewServiceDep = Annotated[ReviewService, Depends(get_review_service)]
