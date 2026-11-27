@@ -67,6 +67,11 @@ services:
       STORAGE_DIR: /srv/storage
       MAX_UPLOAD_BYTES: 52428800
       LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS:-30}
+      # Conservation (N-10) : purge planifiée ; audit purgé par le rôle xeleron_purge (ADR 0021).
+      RETENTION_ENABLED: ${RETENTION_ENABLED:-true}
+      RETENTION_CONSULTATION_DAYS: ${RETENTION_CONSULTATION_DAYS:-90}
+      RETENTION_AUDIT_DAYS: ${RETENTION_AUDIT_DAYS:-365}
+      PURGE_DATABASE_URL: postgresql+psycopg://xeleron_purge:${PURGE_DB_PASSWORD}@db:5432/${POSTGRES_DB}
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
       LLM_MODEL: ${LLM_MODEL:-gemini-3.8-flash}
       LLM_FALLBACK_MODELS: ${LLM_FALLBACK_MODELS:-gemini-3.6-flash,gemini-3.5-flash,gemini-3.1-flash-lite}

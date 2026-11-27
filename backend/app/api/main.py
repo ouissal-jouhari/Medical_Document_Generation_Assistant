@@ -1,5 +1,7 @@
+import asyncio
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI, Request, Response
@@ -9,9 +11,11 @@ from app.api.routes.consultations import router as consultations_router
 from app.api.routes.documents import router as documents_router
 from app.api.routes.health import router as health_router
 from app.api.routes.me import router as me_router
+from app.api.scheduler import retention_loop, stop
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers, route_template
 from app.core.logging import configure_logging
+from app.domain.clock import SystemClock
 
 log = structlog.get_logger()
 
@@ -21,8 +25,26 @@ def create_app() -> FastAPI:
     configure_logging(settings.log_dir, settings.log_retention_days)
     # Templates validés au démarrage (SRS 5.x) : un fichier invalide empêche le démarrage (N-14).
     load_templates(settings.template_dir)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        # Ordonnanceur de purge (N-10), activé par configuration au déploiement.
+        task = (
+            asyncio.create_task(retention_loop(settings, SystemClock()))
+            if settings.retention_enabled
+            else None
+        )
+        yield
+        if task is not None:
+            await stop(task)
+
     app = FastAPI(
-        title="XeleronIA", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None
+        title="XeleronIA",
+        version="0.1.0",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+        lifespan=lifespan,
     )
     register_error_handlers(app)
 

@@ -19,6 +19,7 @@ from app.adapters.icd_table import load_known_icd
 from app.adapters.llm import GeminiLlmProvider, OllamaLlmProvider
 from app.adapters.models import User
 from app.adapters.oidc import OidcIdentityProvider
+from app.adapters.pdf import WeasyPrintExporter
 from app.adapters.storage import LocalFileStore
 from app.adapters.templates import DocumentTemplate, load_templates
 from app.core.config import get_settings
@@ -26,9 +27,10 @@ from app.domain.auth import Permission, permissions_of
 from app.domain.clinic import ClinicProfile
 from app.domain.clock import Clock, SystemClock
 from app.domain.errors import AuthenticationRequired, Forbidden, MfaRequired
-from app.ports import IdentityProvider, OcrProvider
+from app.ports import DocumentExporter, IdentityProvider, OcrProvider
 from app.ports.llm import LlmProvider
 from app.services.consultations import ConsultationService
+from app.services.export import ExportService
 from app.services.generation import GenerationService
 from app.services.review import ReviewService
 
@@ -47,13 +49,13 @@ def get_clock() -> Clock:
 
 
 @lru_cache
-def _session_factory() -> sessionmaker[Session]:
+def session_factory() -> sessionmaker[Session]:
     engine = make_engine(get_settings().database_url.get_secret_value())
     return sessionmaker(engine, expire_on_commit=False)
 
 
 def get_session() -> Iterator[Session]:
-    with _session_factory()() as session:
+    with session_factory()() as session:
         try:
             yield session
             session.commit()
@@ -197,6 +199,21 @@ def get_review_service(
     return ReviewService(session, clock, generation, clinic)
 
 
+@lru_cache
+def get_exporter() -> DocumentExporter:
+    return WeasyPrintExporter()
+
+
+def get_export_service(
+    session: Session = Depends(get_session),
+    clock: Clock = Depends(get_clock),
+    review: ReviewService = Depends(get_review_service),
+    exporter: DocumentExporter = Depends(get_exporter),
+) -> ExportService:
+    return ExportService(session, clock, review, exporter)
+
+
 ConsultationServiceDep = Annotated[ConsultationService, Depends(get_consultation_service)]
 GenerationServiceDep = Annotated[GenerationService, Depends(get_generation_service)]
 ReviewServiceDep = Annotated[ReviewService, Depends(get_review_service)]
+ExportServiceDep = Annotated[ExportService, Depends(get_export_service)]

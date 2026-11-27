@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     migration_database_url: SecretStr | None = None
     log_dir: str = "logs"
     log_retention_days: int = 30
+    # Conservation (N-10, L-02) : purge planifiée ; valeurs du MVP remplacées au déploiement.
+    retention_enabled: bool = False
+    retention_interval_hours: float = 24.0
+    retention_consultation_days: int = 90
+    retention_audit_days: int = 365
+    # Connexion du rôle xeleron_purge : seule autorisée à supprimer l'audit de plus d'un an.
+    purge_database_url: SecretStr | None = None
     # Fournisseur d'identité (Keycloak).
     oidc_issuer: str = "https://localhost/auth/realms/xeleron"
     oidc_jwks_url: str = "http://keycloak:8080/auth/realms/xeleron/protocol/openid-connect/certs"
