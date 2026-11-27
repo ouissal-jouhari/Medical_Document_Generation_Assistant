@@ -8,21 +8,30 @@ type Props = {
   id: string;
   onExpired: () => void;
   onBack: () => void;
+  onOpenDocument: (documentId: string) => void;
 };
 
-export function TextAndDocument({ token, id, onExpired, onBack }: Props) {
+const TYPE_LABELS: Record<string, string> = {
+  clinical_note: "Clinical Note",
+  referral_letter: "Referral Letter",
+  discharge_summary: "Discharge Summary",
+};
+
+export function TextAndDocument({ token, id, onExpired, onBack, onOpenDocument }: Props) {
   const [text, setText] = useState("");
   const [documentType, setDocumentType] = useState("clinical_note");
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [document, setDocument] = useState<GeneratedDocument | null>(null);
+  const [documents, setDocuments] = useState<GeneratedDocument[]>([]);
   // Garde synchrone : un double clic ne lance jamais deux générations (l'état React est asynchrone).
   const inFlight = useRef(false);
 
   useEffect(() => {
     api<{ consultation_text: string | null }>(token, `/consultations/${id}`)
       .then((consultation) => setText(consultation.consultation_text ?? ""))
+      .then(() => api<GeneratedDocument[]>(token, `/consultations/${id}/documents`))
+      .then(setDocuments)
       .catch((e: unknown) => {
         if (e instanceof ApiError && e.status === 401) onExpired();
         else setError(messageFor(e instanceof ApiError ? e.code : "error"));
@@ -59,7 +68,7 @@ export function TextAndDocument({ token, id, onExpired, onBack }: Props) {
         method: "POST",
         body: JSON.stringify({ documentType }),
       });
-      setDocument(result);
+      onOpenDocument(result.id);
     } catch (e: unknown) {
       if (e instanceof ApiError && e.status === 401) onExpired();
       else setError(messageFor(e instanceof ApiError ? e.code : "error"));
@@ -109,43 +118,20 @@ export function TextAndDocument({ token, id, onExpired, onBack }: Props) {
       <button type="button" onClick={() => void generate()} disabled={busy}>
         {busy ? "Generating…" : "Generate draft"}
       </button>
-      {document && (
-        <section aria-label="Document brouillon">
-          <h3>{document.sections.template}</h3>
-          <article aria-label="Common block">
-            <h4>Patient and encounter</h4>
-            <p>
-              {document.sections.common_block.patient_name} ·{" "}
-              {document.sections.common_block.date_of_birth} ·{" "}
-              {document.sections.common_block.patient_id}
-            </p>
-            <p>
-              {document.sections.common_block.physician} ·{" "}
-              {document.sections.common_block.date_of_service}
-            </p>
-            <h4>Diagnoses (coded)</h4>
-            <ul>
-              {document.sections.common_block.diagnoses.map((item, index) => (
-                <li key={`${index}-${item.code}`}>
-                  {item.code}: {item.description}
-                </li>
-              ))}
-            </ul>
-            <h4>Procedures (coded)</h4>
-            <ul>
-              {document.sections.common_block.procedures.map((item, index) => (
-                <li key={`${index}-${item.code}`}>
-                  {item.code}: {item.description}
-                </li>
-              ))}
-            </ul>
-          </article>
-          {document.sections.sections.map((section) => (
-            <article key={section.name}>
-              <h4>{section.name}</h4>
-              <p>{section.status === "PROVIDED" ? section.content : "Not provided"}</p>
-            </article>
-          ))}
+      {documents.length > 0 && (
+        <section aria-label="Documents">
+          <h3>Documents</h3>
+          <ul>
+            {documents.map((d) => (
+              <li key={d.id}>
+                {TYPE_LABELS[d.document_type]} · {d.state === "approved" ? "Approved" : "Under Review"}{" "}
+                · version {d.version}{" "}
+                <button type="button" onClick={() => onOpenDocument(d.id)} disabled={busy}>
+                  Open
+                </button>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
     </section>
