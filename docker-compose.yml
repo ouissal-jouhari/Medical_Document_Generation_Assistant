@@ -75,6 +75,13 @@ services:
       LLM_TOTAL_TIMEOUT_SECONDS: ${LLM_TOTAL_TIMEOUT_SECONDS:-150}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gpt-oss-20b}
+      CLINIC_NAME: ${CLINIC_NAME:-XeleronIA Demo Clinic}
+      CLINIC_ADDRESS: ${CLINIC_ADDRESS:-1 Example Street}
+      CLINIC_CITY: ${CLINIC_CITY:-Springfield}
+      CLINIC_POSTAL_CODE: ${CLINIC_POSTAL_CODE:-00000}
+      CLINIC_PHONE: ${CLINIC_PHONE:-+1 555 0100}
+      CLINIC_EMAIL: ${CLINIC_EMAIL:-contact@clinic.example}
+      CLINIC_WEBSITE: ${CLINIC_WEBSITE:-https://clinic.example}
       OIDC_ISSUER: ${SITE_URL}/auth/realms/xeleron
       OIDC_JWKS_URL: http://keycloak:8080/auth/realms/xeleron/protocol/openid-connect/certs
       OIDC_CLIENT_ID: xeleron-web
