@@ -12,11 +12,14 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.adapters.audit import SqlAuditLog
 from app.adapters.author_scoped import AuthorScopedRepository
-from app.adapters.models import AuditEventRow, Consultation, Document
+from app.adapters.models import Consultation, Document, DocumentVersion
 from app.adapters.templates import DocumentTemplate
+from app.domain.audit import AuditAction
 from app.domain.clock import Clock
 from app.domain.consultation import ConsultationState
+from app.domain.document import DocumentState, SectionOrigin, VersionKind
 from app.domain.errors import (
     LlmTimeout,
     LlmUnavailable,
@@ -36,6 +39,7 @@ class GeneratedSection:
     content: str | None
     sources: list[dict[str, Any]]
     level: str = "STANDARD"
+    origin: str = SectionOrigin.AI.value
 
 
 class _SectionOutput(BaseModel):
@@ -69,6 +73,7 @@ class GenerationService:
         self._llm = llm
         self._templates = templates
         self._repo = AuthorScopedRepository(session, Consultation)
+        self._audit = SqlAuditLog(clock)
 
     def set_text(self, author_id: UUID, consultation_id: UUID, text: str | None) -> Consultation:
         consultation = self._repo.get(consultation_id, author_id)
@@ -95,28 +100,72 @@ class GenerationService:
         return list(self._session.scalars(statement).all())
 
     def get_document(self, author_id: UUID, document_id: UUID) -> Document:
-        statement = select(Document).where(
-            Document.id == document_id,
-            Document.author_id == author_id,
-        )
-        document = self._session.scalars(statement).first()
+        document = AuthorScopedRepository(self._session, Document).get(document_id, author_id)
         if document is None:
             raise NotFound
         return document
 
     def generate(self, author_id: UUID, consultation_id: UUID, document_type: str) -> Document:
+        """Nouveau document en revue, version 1 générée par l'IA (F-09). Échec : rien n'est créé."""
+        content, text = self.draft(author_id, consultation_id, document_type)
+        now = self._clock.now()
+        document = Document(
+            consultation_id=consultation_id,
+            author_id=author_id,
+            document_type=document_type,
+            state=DocumentState.UNDER_REVIEW.value,
+            version=1,
+            created_at=now,
+        )
+        self._session.add(document)
+        self._session.flush()
+        self.add_version(document, author_id, VersionKind.AI_GENERATED, content, text)
+        self._audit.record(self._session, author_id, AuditAction.GENERATED, document.id, 1)
+        return document
+
+    def add_version(
+        self,
+        document: Document,
+        author_id: UUID,
+        kind: VersionKind,
+        content: dict[str, Any],
+        text: str | None,
+        restored_from: int | None = None,
+    ) -> DocumentVersion:
+        """Ajoute la version `document.version` (déjà positionnée par l'appelant)."""
+        version = DocumentVersion(
+            document_id=document.id,
+            number=document.version,
+            kind=kind.value,
+            restored_from=restored_from,
+            author_id=author_id,
+            created_at=self._clock.now(),
+            text_snapshot=text,
+            content=content,
+        )
+        self._session.add(version)
+        self._session.flush()
+        return version
+
+    def draft(
+        self, author_id: UUID, consultation_id: UUID, document_type: str
+    ) -> tuple[dict[str, Any], str | None]:
+        """Contenu généré et instantané du texte (P12). Une seule génération à la fois par
+        consultation : un double déclenchement est refusé (F-09)."""
         key = (author_id, consultation_id)
         with self._generation_lock:
             if key in self._in_progress:
                 raise WrongState
             self._in_progress.add(key)
         try:
-            return self._generate(author_id, consultation_id, document_type)
+            return self._draft(author_id, consultation_id, document_type)
         finally:
             with self._generation_lock:
                 self._in_progress.discard(key)
 
-    def _generate(self, author_id: UUID, consultation_id: UUID, document_type: str) -> Document:
+    def _draft(
+        self, author_id: UUID, consultation_id: UUID, document_type: str
+    ) -> tuple[dict[str, Any], str | None]:
         started = time.monotonic()
         consultation = self._repo.get(consultation_id, author_id)
         if consultation is None:
@@ -132,33 +181,11 @@ class GenerationService:
         prompt = self._prompt(template, text, data)
         schema = self._schema(template)
         sections, llm_seconds, check_seconds = self._ask(template, prompt, schema, text, data)
-        version = len(self.list_documents(author_id, consultation.id)) + 1
-        now = self._clock.now()
-        document = Document(
-            consultation_id=consultation.id,
-            author_id=author_id,
-            document_type=document_type,
-            state="under_review",
-            version=version,
-            text_snapshot=text or None,
-            sections={
-                "template": template.title,
-                "common_block": self._common_block(data),
-                "sections": [s.__dict__ for s in sections],
-            },
-            created_at=now,
-        )
-        self._session.add(document)
-        self._session.flush()
-        self._session.add(
-            AuditEventRow(
-                occurred_at=now,
-                actor_id=author_id,
-                action="document_generated",
-                document_id=document.id,
-                version=document.version,
-            )
-        )
+        content = {
+            "template": template.title,
+            "common_block": self._common_block(data),
+            "sections": [s.__dict__ for s in sections],
+        }
         # N-02 : durées par génération (extraction Superbill mesurée au dépôt, jalon 3).
         log.info(
             "generation_timed",
@@ -167,7 +194,7 @@ class GenerationService:
             validation_ms=round(check_seconds * 1000),
             total_ms=round((time.monotonic() - started) * 1000),
         )
-        return document
+        return content, text or None
 
     def _ask(
         self,
