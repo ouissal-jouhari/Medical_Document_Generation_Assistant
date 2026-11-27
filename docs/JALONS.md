@@ -338,20 +338,20 @@ R-01
 - F-25 doit être rejoué sur toutes les routes créées ici (versions, rollback, relu, approbation).
 
 ### Porte de sortie du jalon 5
-- [ ] Tâches 1 à 5 faites
-- [ ] F-13 vérifié (bandeau, 4 origines, statuts, « Missing information », champs de sécurité visibles s'ils manquent)
-- [ ] F-14 vérifié (version précédente intacte ; édition concurrente refusée)
-- [ ] F-15 vérifié (version rejetée conservée et marquée)
-- [ ] F-16 vérifié (historique intact ; impossible après approbation)
-- [ ] Historique des versions consultable (cas d'usage « View the version history »)
-- [ ] F-26 vérifié (approbation exige une version relue ; une nouvelle version annule « relu »)
-- [ ] F-17 vérifié (bloquée si section obligatoire « Not provided » ; figé après approbation ; édition d'une section la rend fournie)
-- [ ] Referral Letter et Discharge Summary sans texte de consultation : approbation impossible
-- [ ] F-19 vérifié (nouveau document du même type par régénération ; ancien inchangé)
-- [ ] F-20 vérifié pour : généré, relu, approuvé, rejeté, rollback
-- [ ] H-02 vérifié (coordonnées de la clinique figées à l'approbation)
-- [ ] N-11 : approbation impossible = liste des éléments manquants, document reste Under Review ; régénération échouée = version courante intacte
-- [ ] Pipeline CI vert ; F-25 rejoué sur toutes les routes du jalon
+- [x] Tâches 1 à 5 faites (maquette `docs/wireframes/E-06-revue-du-document.md`, écran `DocumentReview.tsx`)
+- [x] F-13 vérifié (`test_F13_review_exposes_draft_banner_origins_statuses_and_missing_information`, `test_F13_safety_sections_missing_are_listed`, `test_S01_banner_disappears_only_after_approval` ; rendu navigateur bout en bout au jalon 7, Playwright)
+- [x] F-14 vérifié (`test_F14_edit_creates_edited_version_and_previous_stays_intact`, `test_F14_concurrent_edit_with_stale_version_is_refused`, `test_F14_race_between_two_saves_is_refused_by_optimistic_lock`, `test_F14_database_refuses_two_versions_with_the_same_number`, `test_F14_application_role_cannot_update_versions_or_review_marks`)
+- [x] F-15 vérifié (`test_F15_rejected_version_is_kept_and_regeneration_creates_ai_version`)
+- [x] F-16 vérifié (`test_F16_rollback_restores_old_content_in_new_version_and_history_stays_intact`, `test_F17_approval_records_author_and_date_and_freezes_the_document`)
+- [x] Historique des versions consultable (`test_F16_version_history_is_viewable_with_marks`)
+- [x] F-26 vérifié (`test_F26_mark_reviewed_records_author_version_and_date`, `test_F26_new_version_cancels_reviewed_and_approval_requires_current_reviewed`, `test_F26_rejected_version_cannot_be_reviewed_or_approved`)
+- [x] F-17 vérifié (`test_F17_approval_blocked_when_required_section_not_provided`, `test_F17_approval_records_author_and_date_and_freezes_the_document`, `test_F17_freeze_is_enforced_by_the_domain`, `test_F17_editing_a_not_provided_section_makes_it_provided`)
+- [x] Referral Letter et Discharge Summary sans texte de consultation : approbation impossible (`test_F17_referral_and_discharge_without_text_cannot_be_approved`)
+- [x] F-19 vérifié (`test_F19_create_new_document_regenerates_same_type_and_old_stays_unchanged`)
+- [x] F-20 vérifié pour : généré, relu, approuvé, rejeté, rollback (`test_F20_review_actions_are_audited_with_actor_document_and_version`)
+- [x] H-02 vérifié (`test_H02_clinic_details_are_frozen_at_approval`, `test_H01_no_route_modifies_clinic_details` ; ADR 0018)
+- [x] N-11 : approbation impossible = liste des éléments manquants, document reste Under Review (`test_F17_approval_blocked_*`) ; régénération échouée = version courante intacte (`test_N11_failed_regeneration_keeps_current_version_intact`)
+- [x] Pipeline CI vert (PR #3, run 46055897047 : quality, security, ocr, smoke) ; F-25 rejoué sur toutes les routes du jalon (`test_F25_review_routes_hide_documents_of_another_clinician`, `test_F25_every_document_route_is_covered`)
 - [ ] Utilisateur : « jalon validé »
 
 ---
