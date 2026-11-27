@@ -548,6 +548,9 @@ def test_F25_every_document_route_is_covered(api: Api) -> None:
         "/documents/{document_id}/review",
         "/documents/{document_id}/approve",
         "/documents/{document_id}/new-document",
+        # Jalon 6 : couvertes par test_F25_export_routes_hide_documents_of_another_clinician.
+        "/documents/{document_id}/export",
+        "/documents/{document_id}/provenance-report",
     }
 
 

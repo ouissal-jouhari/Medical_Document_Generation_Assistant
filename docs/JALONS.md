@@ -51,8 +51,8 @@ Dire : « Démarre le jalon N ». Le contenu du jalon N est alors lu, puis exéc
 | 2 | Authentification, contrôle d'accès et audit | S1–S2 | j5–j8 | TERMINÉ |
 | 3 | Superbill : dépôt, extraction, vérification | S2–S3 | j9–j15 | TERMINÉ (validé par l'utilisateur) |
 | 4 | Texte de consultation et génération | S4–S5 | j16–j23 | TERMINÉ (validé par l'utilisateur) |
-| 5 | Revue, versions et approbation | S5–S6 | j24–j30 | EN COURS |
-| 6 | Export, provenance, suppression et conservation | S7 | j31–j35 | À FAIRE |
+| 5 | Revue, versions et approbation | S5–S6 | j24–j30 | TERMINÉ (validé par l'utilisateur) |
+| 6 | Export, provenance, suppression et conservation | S7 | j31–j35 | EN COURS |
 | 7 | Évaluation IA, tests, observabilité, démonstration | S8 | j36–j40 | À FAIRE |
 
 Statuts possibles : À FAIRE · EN COURS · TERMINÉ (validé par l'utilisateur).
@@ -351,8 +351,8 @@ R-01
 - [x] F-20 vérifié pour : généré, relu, approuvé, rejeté, rollback (`test_F20_review_actions_are_audited_with_actor_document_and_version`)
 - [x] H-02 vérifié (`test_H02_clinic_details_are_frozen_at_approval`, `test_H01_no_route_modifies_clinic_details` ; ADR 0018)
 - [x] N-11 : approbation impossible = liste des éléments manquants, document reste Under Review (`test_F17_approval_blocked_*`) ; régénération échouée = version courante intacte (`test_N11_failed_regeneration_keeps_current_version_intact`)
-- [x] Pipeline CI vert (PR #3, run 46055897047 : quality, security, ocr, smoke) ; F-25 rejoué sur toutes les routes du jalon (`test_F25_review_routes_hide_documents_of_another_clinician`, `test_F25_every_document_route_is_covered`)
-- [ ] Utilisateur : « jalon validé »
+- [x] Pipeline CI vert (PR #3, run 46055897047 : quality, security, ocr, smoke) ; F-25 rejoué sur toutes les routes du jalon (`test_F25_review_routes_hide_documents_of_another_clinician`, `test_F25_every_document_route_is_covered`) ; PR #3 fusionnée, CI `main` verte (run 46068956389), tag `jalon-5`
+- [x] Utilisateur : « jalon validé » (2026-11-27)
 
 ---
 
@@ -398,16 +398,16 @@ R-05
 - Tous les cas d'échec (PDF) ont un test : ils sont comptés dans N-11 au jalon 7.
 
 ### Porte de sortie du jalon 6
-- [ ] Tâches 1 à 4 faites
-- [ ] F-18 vérifié (après approbation seulement ; **le texte du PDF ne contient aucune mention d'IA, de sources ou de brouillon** (test automatique) ; export tracé)
-- [ ] F-24 vérifié (en-tête et pied de page sur chaque page ; valeurs figées à l'approbation)
-- [ ] Pagination vérifiée sur un document de plusieurs pages
-- [ ] Contenu HTML injecté dans une section : échappé, aucune requête sortante du rendu PDF
-- [ ] F-23 vérifié (avant et après approbation ; hors du document clinique ; tracé ; provenance absente du PDF clinique, L-08)
-- [ ] F-22 vérifié (suppression complète ; trace minimale sans donnée patient ; audit intact)
-- [ ] N-10 vérifié avec dates simulées (y compris consultation jamais approuvée) ; rotation des logs à 30 jours en place
-- [ ] N-11 : échec PDF = message sûr, document reste Approved inchangé
-- [ ] Pipeline CI vert ; F-25 rejoué sur export, rapport de provenance et suppression
+- [x] Tâches 1 à 4 faites (maquette `docs/wireframes/E-07-document-approuve.md`, écran E-07 dans `DocumentReview.tsx` ; ADR 0019, 0020, 0021)
+- [x] F-18 vérifié (`test_F18_export_is_possible_after_approval_only`, `test_F18_each_export_is_traced_and_repeatable`, `test_F18_exported_document_has_no_origin_source_or_draft_marker`, `test_F18_pdf_text_has_no_mention_of_ai_sources_or_draft`, `test_F18_application_role_can_only_add_or_erase_exports`)
+- [x] F-24 vérifié (`test_F24_header_and_footer_on_every_page_with_frozen_clinic_and_pagination`)
+- [x] Pagination vérifiée sur un document de plusieurs pages (même test : « x / y » sur chaque page)
+- [x] Contenu HTML injecté dans une section : échappé, aucune requête sortante du rendu PDF (`test_N06_html_in_a_section_is_escaped_and_rendering_makes_no_request`, `test_N06_pdf_renderer_refuses_every_url`)
+- [x] F-23 vérifié (`test_F23_provenance_report_before_and_after_approval_is_traced`, `test_F23_provenance_report_pdf_is_separate_from_the_clinical_pdf`) ; F-20 (`test_F20_export_and_provenance_report_are_audited_with_actor_document_and_version`)
+- [x] F-22 vérifié (`test_F22_deletion_also_removes_exports_and_keeps_the_audit`, `test_F22_deletion_removes_everything_and_keeps_a_minimal_audit_trace`)
+- [x] N-10 vérifié avec dates simulées (`test_N10_consultation_is_purged_90_days_after_its_last_approval`, `test_N10_never_approved_consultation_is_purged_90_days_after_its_last_activity`, `test_N10_recent_consultations_of_every_author_are_kept`, `test_N10_scheduled_purge_applies_the_policy_with_a_simulated_date`, `test_N10_purge_scheduler_starts_with_the_application_when_enabled`, `test_N10_audit_older_than_one_year_is_purged_with_the_purge_role`) ; rotation des logs à 30 jours (`test_N10_logs_rotate_daily_and_keep_30_days`)
+- [x] N-11 : échec PDF = message sûr, document reste Approved inchangé (`test_N11_pdf_failure_gives_a_safe_message_and_document_stays_approved`) ; canari (`test_N08_export_and_provenance_do_not_log_patient_data`)
+- [x] Pipeline CI vert (PR #4, run 46079004298 : quality 215 tests dont les 6 de rendu WeasyPrint, security, ocr, smoke) ; F-25 rejoué sur export, rapport de provenance et suppression (`test_F25_export_routes_hide_documents_of_another_clinician`, `test_F25_every_document_route_is_covered`, `test_F22_clinician_cannot_delete_a_foreign_or_missing_consultation`)
 - [ ] Utilisateur : « jalon validé »
 
 ---

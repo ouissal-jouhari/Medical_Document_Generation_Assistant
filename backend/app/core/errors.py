@@ -57,6 +57,8 @@ SAFE_STATUS = {
     "document_approved": 409,
     "version_conflict": 409,
     "approval_blocked": 409,
+    "document_not_approved": 409,
+    "export_failed": 500,
 }
 
 

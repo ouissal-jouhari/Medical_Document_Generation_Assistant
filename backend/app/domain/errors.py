@@ -105,3 +105,19 @@ class ApprovalBlocked(SafeError):
     """Approbation impossible : `extra["missing"]` liste les éléments manquants (N-11)."""
 
     code = "approval_blocked"
+
+
+class NotApproved(SafeError):
+    """Export clinique possible après approbation seulement (F-18)."""
+
+    code = "document_not_approved"
+
+
+class ExportFailed(SafeError):
+    """Rendu PDF en échec (N-11) : le document reste inchangé, aucun détail exposé."""
+
+    code = "export_failed"
+
+
+class ExportError(Exception):
+    """Échec technique de rendu (interne). Le détail n'est jamais exposé ni journalisé."""
