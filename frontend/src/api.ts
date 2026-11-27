@@ -34,10 +34,21 @@ export type Summary = {
   extraction_failures: number;
 };
 
+export type CommonBlock = {
+  patient_name: string | null;
+  date_of_birth: string | null;
+  patient_id: string | null;
+  physician: string | null;
+  date_of_service: string | null;
+  diagnoses: { code: string; description: string }[];
+  procedures: { code: string; description: string }[];
+};
+
 export type DocumentSection = {
   name: string;
   status: "PROVIDED" | "NOT_PROVIDED";
   content: string | null;
+  level: "REQUIRED" | "SAFETY" | "STANDARD";
   sources: { citation: string; start: number; end: number; kind: string }[];
 };
 
@@ -48,7 +59,7 @@ export type GeneratedDocument = {
   state: "under_review";
   version: number;
   text_snapshot: string | null;
-  sections: { template: string; sections: DocumentSection[] };
+  sections: { template: string; common_block: CommonBlock; sections: DocumentSection[] };
   created_at: string;
 };
 
@@ -73,6 +84,7 @@ export async function api<T>(token: string, path: string, init: RequestInit = {}
   } catch {
     throw new ApiError(0, "network_error");
   }
+  if (response.status === 204) return undefined as T;
   if (response.ok) return (await response.json()) as T;
   let code = "error";
   let issues: Issue[] = [];

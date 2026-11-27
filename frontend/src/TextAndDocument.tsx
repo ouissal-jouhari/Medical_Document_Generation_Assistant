@@ -87,6 +87,34 @@ export function TextAndDocument({ token, id, onExpired, onBack }: Props) {
       {document && (
         <section aria-label="Document brouillon">
           <h3>{document.sections.template}</h3>
+          <article aria-label="Common block">
+            <h4>Patient and encounter</h4>
+            <p>
+              {document.sections.common_block.patient_name} ·{" "}
+              {document.sections.common_block.date_of_birth} ·{" "}
+              {document.sections.common_block.patient_id}
+            </p>
+            <p>
+              {document.sections.common_block.physician} ·{" "}
+              {document.sections.common_block.date_of_service}
+            </p>
+            <h4>Diagnoses (coded)</h4>
+            <ul>
+              {document.sections.common_block.diagnoses.map((item) => (
+                <li key={item.code}>
+                  {item.code}: {item.description}
+                </li>
+              ))}
+            </ul>
+            <h4>Procedures (coded)</h4>
+            <ul>
+              {document.sections.common_block.procedures.map((item) => (
+                <li key={item.code}>
+                  {item.code}: {item.description}
+                </li>
+              ))}
+            </ul>
+          </article>
           {document.sections.sections.map((section) => (
             <article key={section.name}>
               <h4>{section.name}</h4>
