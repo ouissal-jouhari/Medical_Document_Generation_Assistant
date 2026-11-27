@@ -10,12 +10,12 @@ from typing import Any
 from uuid import UUID
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.adapters.author_scoped import AuthorScopedRepository
 from app.adapters.file_inspector import FileInfo, inspect_upload
-from app.adapters.models import Consultation, ConsultationCorrection
+from app.adapters.models import AuditEventRow, Consultation, ConsultationCorrection, Document
 from app.adapters.storage import LocalFileStore
 from app.domain.clock import Clock
 from app.domain.consultation import ConsultationState
@@ -88,6 +88,27 @@ class ConsultationService:
             .order_by(ConsultationCorrection.changed_at.desc())
         )
         return list(self._session.scalars(statement).all())
+
+    def delete(self, author_id: UUID, consultation_id: UUID) -> None:
+        """F-22 : fichier, texte, documents, versions et corrections sont supprimés ; l'audit ne
+        garde qu'une trace minimale (acteur, action, date), sans donnée patient."""
+        consultation = self.get(author_id, consultation_id)
+        storage_key = consultation.storage_key
+        self._session.execute(delete(Document).where(Document.consultation_id == consultation.id))
+        self._session.execute(
+            delete(ConsultationCorrection).where(
+                ConsultationCorrection.consultation_id == consultation.id
+            )
+        )
+        self._session.delete(consultation)
+        self._session.add(
+            AuditEventRow(
+                occurred_at=self._clock.now(), actor_id=author_id, action="consultation_deleted"
+            )
+        )
+        self._session.flush()
+        if storage_key:
+            self._store.delete(storage_key)
 
     # -- dépôt et extraction ---------------------------------------------------------------
     def create(self, author_id: UUID, content: bytes, extension: str) -> UploadOutcome:

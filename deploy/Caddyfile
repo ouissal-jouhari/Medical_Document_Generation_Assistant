@@ -18,12 +18,18 @@
 		reverse_proxy keycloak:8080
 	}
 
+	# Délai aligné sur le plus long traitement serveur (extraction 300 s, génération 150 s) + marge.
 	handle_path /api/* {
 		header {
 			X-Frame-Options "DENY"
 			Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
 		}
-		reverse_proxy backend:8000
+		reverse_proxy backend:8000 {
+			transport http {
+				response_header_timeout 330s
+				read_timeout 330s
+			}
+		}
 	}
 
 	handle {

@@ -1,12 +1,30 @@
 id: referral_letter
 title: Referral Letter
 sections:
-  - name: Reason for Referral
-    status: NOT_PROVIDED
-    citation_required: true
-  - name: Clinical Summary
-    status: NOT_PROVIDED
-    citation_required: true
-  - name: Requested Evaluation
-    status: NOT_PROVIDED
-    citation_required: true
+  - name: Recipient
+    level: STANDARD
+    description: The specialist, service or organisation the patient is referred to.
+  - name: Reason for referral
+    level: REQUIRED
+    description: Why the patient is referred.
+  - name: Urgency
+    level: STANDARD
+    description: How urgent the referral is, if stated.
+  - name: History and clinical summary
+    level: STANDARD
+    description: Relevant history and clinical course stated in the text.
+  - name: Clinical findings and investigation results
+    level: STANDARD
+    description: Examination findings and investigation results.
+  - name: Assessment
+    level: REQUIRED
+    description: The clinician's assessment stated in the text.
+  - name: Current treatment and medications
+    level: SAFETY
+    description: Current treatment and medications explicitly stated in the text.
+  - name: Allergies and adverse reactions
+    level: SAFETY
+    description: Allergies or adverse reactions explicitly stated in the text.
+  - name: Plan and requested actions
+    level: REQUIRED
+    description: Plan and the actions requested from the recipient.

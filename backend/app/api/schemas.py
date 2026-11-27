@@ -93,14 +93,6 @@ class ConsultationTextIn(_In):
 
 class DocumentGenerateIn(_In):
     document_type: str = Field(alias="documentType")
-    model_config = ConfigDict(populate_by_name=True, extra="forbid")
-
-
-class DocumentSectionOut(BaseModel):
-    name: str
-    status: str
-    content: str | None
-    sources: list[dict[str, Any]]
 
 
 class DocumentOut(BaseModel):

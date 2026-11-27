@@ -267,21 +267,22 @@ R-01, R-03, R-04
 - La régénération (rejet, jalon 5) et « Create new document » (jalon 5) réutilisent ce flux.
 
 ### Porte de sortie du jalon 4
-- [ ] Tâches 1 à 6 faites
-- [ ] F-07 vérifié (5 001 caractères refusés ; absence de texte acceptée ; remarque affichée, jamais exportée ; texte modifiable après génération, instantané conservé)
-- [ ] F-08 vérifié (revue de conception)
-- [ ] F-09 vérifié (impossible si non Validated ; plusieurs documents possibles)
-- [ ] F-10 vérifié (sortie conforme au schéma, sources enregistrées)
-- [ ] F-11 vérifié sur le jeu de test avec information manquante
-- [ ] F-12 vérifié (sortie malformée jamais affichée)
-- [ ] Si la première génération échoue, la consultation reste Validated et aucun Document n'est créé
-- [ ] S-02 / S-03 : cas de négation et section sans citation repassée à « Not provided »
-- [ ] N-07 vérifié (cas « Ignore previous instructions »)
-- [ ] N-19 vérifié (test automatique sur les prompts : aucun identifiant, canari absent)
-- [ ] N-14 vérifié (ajout d'un template sans modifier le moteur)
-- [ ] N-11 : message sûr, sans trace technique, pour LLM indisponible ou lent et sortie malformée
-- [ ] Durées mesurées pour Gemini ; durées gpt-oss-20b mesurées en local si disponible (N-02 préparé)
-- [ ] Pipeline CI vert ; F-25 rejoué sur les routes de génération
+- [x] Tâches 1 à 6 faites
+- [x] F-07 vérifié (`test_F07_text_limit_is_enforced_server_side`, `test_F07_text_stays_editable_after_generation_and_each_document_keeps_its_snapshot`, `test_F07_missing_text_remark_is_never_part_of_the_document` ; remarque affichée dans `TextAndDocument.tsx`, export hors jalon 4)
+- [x] F-08 vérifié (revue de conception : ADR 0016)
+- [x] F-09 vérifié (`test_F09_generation_requires_validated_and_supports_multiple_documents`, `test_F09_double_trigger_is_refused_while_generating`)
+- [x] F-10 vérifié (`test_F10_*`, sources enregistrées ; `test_F12_schema_drift_*` : schéma strict, ADR 0016)
+- [x] F-11 vérifié sur le jeu de test avec information manquante (`test_F11_*`, et sur Gemini réel : `test_F11_live_gemini_generation_follows_the_evaluation_case`, 4/4, `docs/mesures/jalon-4-gemini.md`)
+- [x] F-12 vérifié (`test_F12_malformed_output_never_becomes_a_draft`, `test_F12_schema_drift_is_malformed_not_silently_not_provided`, `test_F12_retries_then_falls_back_to_next_model`, `test_F12_timeout_*`)
+- [x] Si la première génération échoue, la consultation reste Validated et aucun Document n'est créé (`test_F09_failed_first_generation_keeps_consultation_validated_and_creates_no_document`)
+- [x] S-02 / S-03 : cas de négation et section sans citation repassée à « Not provided » (`test_S02_*`, `test_S03_*`)
+- [x] N-07 vérifié (`test_N07_prompt_injection_is_untrusted_data`, cas live `prompt_injection`)
+- [x] N-19 vérifié (`test_N19_prompts_do_not_contain_patient_identifiers`, `test_N19_gemini_error_message_is_never_logged`)
+- [x] N-14 vérifié (`test_N14_adding_a_template_file_needs_no_engine_change`, `test_N14_application_refuses_to_start_with_an_invalid_template`)
+- [x] N-11 : message sûr, sans trace technique (`test_N11_llm_timeout_has_safe_error_and_no_draft`, `test_N11_total_budget_bounds_the_whole_generation`, `test_F12_unavailable_when_all_models_fail`)
+- [x] Durées mesurées pour Gemini (N-02 : `generation_timed`, rapport `docs/mesures/jalon-4-gemini.md`). Écart : objectif 20 s (N-01) non tenu, non bloquant.
+- [ ] Durées gpt-oss-20b mesurées en local : **non fait** (Ollama installé, démon arrêté, modèle non vérifié)
+- [x] Pipeline CI vert (PR #2, run 46006171129 : quality, security, ocr, smoke) ; F-25 rejoué sur les routes de génération (`test_F25_generation_routes_hide_documents_of_another_clinician`)
 - [ ] Utilisateur : « jalon validé »
 
 ---

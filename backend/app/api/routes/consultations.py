@@ -4,7 +4,7 @@ et ne voient que ses propres consultations (F-25)."""
 from pathlib import PurePath
 from uuid import UUID
 
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter, Response, UploadFile
 
 from app.adapters.models import Consultation, Document
 from app.api.deps import (
@@ -87,6 +87,14 @@ def get_consultation(
     consultation_id: UUID, user: ClinicianUser, service: ConsultationServiceDep
 ) -> ConsultationOut:
     return _out(service, service.get(user.id, consultation_id))
+
+
+@router.delete("/{consultation_id}", status_code=204)
+def delete_consultation(
+    consultation_id: UUID, user: ClinicianUser, service: ConsultationServiceDep
+) -> Response:
+    service.delete(user.id, consultation_id)
+    return Response(status_code=204)
 
 
 @router.post("/{consultation_id}/superbill")
