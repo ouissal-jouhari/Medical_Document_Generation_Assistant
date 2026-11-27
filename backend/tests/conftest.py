@@ -125,6 +125,16 @@ def require_postgres_url() -> str:
     pytest.skip("TEST_DATABASE_URL absent : test PostgreSQL ignoré en local")
 
 
+def require_weasyprint() -> None:
+    """Rendu PDF réel (WeasyPrint et Pango) : obligatoire en CI, ignoré s'il manque en local."""
+    try:
+        import weasyprint  # noqa: F401
+    except (ImportError, OSError):
+        if os.environ.get("CI"):
+            pytest.fail("WeasyPrint est obligatoire en CI : test PDF non exécuté")
+        pytest.skip("WeasyPrint absent : test PDF ignoré en local")
+
+
 BACKEND = Path(__file__).resolve().parents[1]
 APP_PW = "app-test-pw"  # noqa: S105 - mot de passe de test, base jetable
 PURGE_PW = "purge-test-pw"  # noqa: S105

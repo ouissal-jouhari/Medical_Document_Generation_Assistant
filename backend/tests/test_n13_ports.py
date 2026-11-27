@@ -14,6 +14,7 @@ from app.domain.values import (
     ExportedFile,
     Identity,
     OcrResult,
+    ProvenanceReport,
     Transcript,
 )
 from app.ports import (
@@ -73,8 +74,11 @@ class FakeTranscript:
 
 
 class FakeExporter:
-    def export(self, document: ExportableDocument) -> ExportedFile:
-        return ExportedFile(filename="d.bin", media_type="application/octet-stream", content=b"")
+    def export(self, document: ExportableDocument, filename: str) -> ExportedFile:
+        return ExportedFile(filename=filename, media_type="application/octet-stream", content=b"")
+
+    def export_provenance(self, report: ProvenanceReport, filename: str) -> ExportedFile:
+        return ExportedFile(filename=filename, media_type="application/octet-stream", content=b"")
 
 
 def test_N13_any_provider_satisfies_its_port() -> None:
@@ -87,4 +91,7 @@ def test_N13_any_provider_satisfies_its_port() -> None:
     assert llm.generate_structured("p", {}) == {}
     assert identity.verify_token("t").mfa_verified
     assert ingestion.ingest("c", "t").source == "fake"
-    assert exporter.export(ExportableDocument("d", "t", "fr")).filename == "d.bin"
+    document = ExportableDocument("t", {}, {}, (), "Dr A", "2026-01-01")
+    assert exporter.export(document, "d.bin").filename == "d.bin"
+    report = ProvenanceReport("t", "approved", 1, "2026-01-01", ())
+    assert exporter.export_provenance(report, "p.bin").filename == "p.bin"
